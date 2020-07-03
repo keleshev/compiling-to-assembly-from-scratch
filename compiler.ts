@@ -150,8 +150,10 @@ let token = (pattern) =>
 // Keywords
 let FUNCTION = token(/function\b/y);
 let IF = token(/if\b/y);
+let WHILE = token(/while\b/y);  // TODO
 let ELSE = token(/else\b/y);
 let RETURN = token(/return\b/y);
+let VAR = token(/var\b/y);  // TODO
 
 let COMMA = token(/[,]/y);
 let SEMICOLON = token(/;/y);
@@ -177,7 +179,7 @@ let PLUS = token(/[+]/y).map((_) => Add);
 let MINUS = token(/[-]/y).map((_) => Subtract);
 let STAR = token(/[*]/y).map((_) => Multiply);
 let SLASH = token(/[\/]/y).map((_) => Divide);
-//let ASSIGN = token(/=/y);
+let ASSIGN = token(/=/y).map((_) => Assign); // TODO
 
 
 
@@ -196,7 +198,7 @@ let call: Parser<AST> =
   ID.bind((callee) =>
     LEFT_PAREN.and(args.bind((args) =>
       RIGHT_PAREN.and(constant(
-        callee === 'assert' 
+        callee === '__assert' 
           ? new Assert(args[0])
 	  : new Call(callee, args))))));
 
@@ -284,6 +286,26 @@ let ifStatement: Parser<AST> =
       ELSE.and(statement).bind((alternative) =>
 	constant(new If(conditional, consequence, alternative)))));
 
+// whileStatement <-
+//   WHILE LEFT_PAREN expression RIGHT_PAREN statement
+let whileStatement: Parser<AST> =
+  WHILE.and(LEFT_PAREN).and(expression).bind((conditional) =>
+    RIGHT_PAREN.and(statement).bind((body) =>
+      constant(new While(conditional, body))));
+
+// varStatement <- TODO
+//   VAR ID ASSIGN expression SEMICOLON
+let varStatement: Parser<AST> =
+  VAR.and(ID).bind((name) =>
+    ASSIGN.and(expression).bind((value) => 
+      SEMICOLON.and(constant(new Var(name, value)))));
+
+// assignmentStatement <- ID ASSIGN EXPRESSION SEMICOLON
+let assignmentStatement: Parser<AST> =
+  ID.bind((name) =>
+    ASSIGN.and(expression).bind((value) => 
+      SEMICOLON.and(constant(new Assign(name, value)))));
+
 // blockStatement <- LEFT_BRACE statement* RIGHT_BRACE
 let blockStatement: Parser<AST> =
   LEFT_BRACE.and(zeroOrMore(statement)).bind((statements) =>
@@ -308,27 +330,35 @@ let functionStatement: Parser<AST> =
     LEFT_PAREN.and(parameters).bind((parameters) =>
       RIGHT_PAREN.and(blockStatement).bind((block) =>
         constant(
-          name === 'main'
+          name === '__main'
             ? new Main(block.statements)
             : new FunctionDefinition(name, parameters, block)))));
 
 
 // statement <- returnStatement 
 //            / ifStatement 
+//            / whileStatement 
+//            / varStatement 
+//            / assignmentStatement 
 //            / blockStatement
 //            / functionStatement
 //            / expressionStatement 
 let statementParser: Parser<AST> =
-  returnStatement.or(functionStatement).or(ifStatement).or(
-    blockStatement).or(expressionStatement);
-// Super interesting, why adding this fails?
-//.or(error('statement'));
+  returnStatement
+    .or(functionStatement)
+    .or(ifStatement)
+    .or(whileStatement)
+    .or(varStatement)
+    .or(assignmentStatement)
+    .or(blockStatement)
+    .or(expressionStatement);
 
 statement.parse = statementParser.parse;
 
 let parser: Parser<AST> =
   ignored.and(zeroOrMore(statement)).map((statements) =>
     new Block(statements));
+
 
 //console.error(tokenize(`
 //function factorial(n) {
@@ -358,7 +388,10 @@ class Label {
 //  | Add | Subtract | Multiply | Call | Id
 //  | Assert | Exit | Block | Return | If | FunctionDefinition
 
-type Environment = Map<string, number>
+class Environment {
+  constructor(public locals: Map<string, number> = new Map(),
+              public nextLocalOffset: number = 0) {}
+}
 
 interface AST {
   emit(Environment): void; 
@@ -420,24 +453,6 @@ class Integer implements AST {
   equals(other: AST) {
     return other instanceof Integer &&
       this.value === other.value;
-  }
-}
-
-class Id implements AST {
-  constructor(public value: string) {}
-
-  emit(env: Environment) {
-    let offset = env.get(this.value);
-    if (offset) {
-      emit(`  ldr r0, [fp, #${offset}]`);
-    } else {
-      console.log(env);
-      throw Error(`Undefined variable: ${this.value}`);
-    }
-  }
-
-  equals(other: AST) {
-    return other instanceof Id && this.value === other.value;
   }
 }
 
@@ -573,25 +588,22 @@ class Call implements AST {
   constructor(public callee: string, public args: Array<AST>) {}
 
   emit(env: Environment) {
-    switch (this.args.length) {
-      case 0:
-        return emit(`  bl ${this.callee}`);
-      case 1:
-        this.args[0].emit(env);
-	return emit(`  bl ${this.callee}`);
-      case 2:
-      case 3:
-      case 4:
-        // TODO: I don't think this is ever tested
-        emit(`  sub sp, sp, #16`);
-        this.args.forEach((arg, i) => {
-	  arg.emit(env);
-	  emit(`  str r0, [sp, #${4 * i}]`);
-	});
-	emit(`  pop {r0, r1, r2, r3}`);
-	return emit(`  bl ${this.callee}`);
-      default:
-	throw Error("More than 4 arguments are not supported");
+    let count = this.args.length;
+    if (count === 0) {
+      emit(`  bl ${this.callee}`);
+    } else if (count === 1) {
+      this.args[0].emit(env);
+      emit(`  bl ${this.callee}`);
+    } else if (count >= 2 && count <= 4) {
+      emit(`  sub sp, sp, #16`);
+      this.args.forEach((arg, i) => {
+        arg.emit(env);
+        emit(`  str r0, [sp, #${4 * i}]`);
+      });
+      emit(`  pop {r0, r1, r2, r3}`);
+      emit(`  bl ${this.callee}`);
+    } else {
+      throw Error("More than 4 arguments are not supported");
     }
   }
 
@@ -607,30 +619,16 @@ class Exit implements AST {
   constructor(public term: AST) {}
 
   emit(env) {
-    let syscall_number = 1;
+    let syscallNumber = 1;
     emit(`  mov r0, #0`);
     emit(`  bl fflush`);
     this.term.emit(env);
-    emit(`  mov r7, #${syscall_number}`);
+    emit(`  mov r7, #${syscallNumber}`);
     emit(`  swi #0`);
   }
 
   equals(other: AST) {
     return other instanceof Exit && this.term.equals(other.term);
-  }
-}
-
-class Return implements AST {
-  constructor(public term: AST) {}
-
-  emit(env) {
-    this.term.emit(env);
-    emit(`  mov sp, fp`);
-    emit(`  pop {fp, pc}`);
-  }
-
-  equals(other: AST) {
-    return other instanceof Return && this.term.equals(other.term);
   }
 }
 
@@ -657,16 +655,16 @@ class If implements AST {
 	      public alternative: AST) {}
 
   emit(env: Environment) {
-    let else_label = new Label();
-    let end_if_label = new Label();
+    let ifFalseLabel = new Label();
+    let endIfLabel = new Label();
     this.conditional.emit(env);
     emit(`  cmp r0, #0`);
-    emit(`  beq ${else_label}`);
+    emit(`  beq ${ifFalseLabel}`);
     this.consequence.emit(env);
-    emit(`  b ${end_if_label}`);
-    emit(`${else_label}:`);
+    emit(`  b ${endIfLabel}`);
+    emit(`${ifFalseLabel}:`);
     this.alternative.emit(env);
-    emit(`${end_if_label}:`);
+    emit(`${endIfLabel}:`);
   }
 
   equals(other: AST) {
@@ -683,26 +681,40 @@ class FunctionDefinition implements AST {
               public body: AST) {}
 
   emit(_: Environment) {
-    let count = this.parameters.length;
-    if (count > 4) 
+    if (this.parameters.length > 4) 
       throw Error("More than 4 params is not supported");
+
     emit(``);
     emit(`.global ${this.name}`);
     emit(`${this.name}:`);
+
+    this.emitPrologue();
+    let env = this.setUpEnvironment();
+    this.body.emit(env);
+    this.emitEpilogue();
+  }
+
+  emitPrologue() {
     emit(`  push {fp, lr}`);
     emit(`  mov fp, sp`);
-    //if (count === 1 || count === 2) {
-    //  emit(`  push {r0, r1}`);
-    //} else if (count === 3 || count === 4) {
-      emit(`  push {r0, r1, r2, r3}`);
-    //}
-    let env = new Map();
+    emit(`  push {r0, r1, r2, r3}`);
+    // Alternatively:
+    // emit(`  push {r0, r1, r2, r3, fp, lr}`);
+    // emit(`  add fp, sp, #16`);
+  }
+
+  setUpEnvironment() {
+    let env = new Environment();
     this.parameters.forEach((parameter, i) => {
-      env.set(parameter, -16 + 4 * i);//-4 * (i + 1));
+      env.locals.set(parameter, 4 * i - 16);
     });
-    this.body.emit(env);
-    emit(`  mov r0, #0`);
+    env.nextLocalOffset = -20;
+    return env;
+  }
+
+  emitEpilogue() {
     emit(`  mov sp, fp`);
+    emit(`  mov r0, #0`);
     emit(`  pop {fp, pc}`);
   }
 
@@ -715,6 +727,132 @@ class FunctionDefinition implements AST {
       this.body.equals(other.body);
   }
 }
+
+class Id implements AST {
+  constructor(public value: string) {}
+
+  emit(env: Environment) {
+    let offset = env.locals.get(this.value);
+    if (offset) {
+      emit(`  ldr r0, [fp, #${offset}]`);
+    } else {
+      console.log(env);
+      throw Error(`Undefined variable: ${this.value}`);
+    }
+  }
+
+  equals(other: AST) {
+    return other instanceof Id && 
+      this.value === other.value;
+  }
+}
+
+class Return implements AST {
+  constructor(public term: AST) {}
+
+  emit(env) {
+    this.term.emit(env);
+    emit(`  mov sp, fp`);
+    emit(`  pop {fp, pc}`);
+  }
+
+  equals(other: AST) {
+    return other instanceof Return && 
+      this.term.equals(other.term);
+  }
+}
+
+
+class While implements AST {
+  constructor(public conditional: AST, public body: AST) {}
+
+  emit(env: Environment) {
+    let loopStart = new Label();
+    let loopEnd = new Label();
+
+    emit(`${loopStart}:`);
+    this.conditional.emit(env);
+    emit(`  cmp r0, #0`);
+    emit(`  beq ${loopEnd}`);
+    this.body.emit(env);
+    emit(`  b ${loopStart}`);
+    emit(`${loopEnd}:`);
+  }
+
+  equals(other: AST) {
+    return other instanceof While &&
+      this.conditional.equals(other.conditional) &&
+      this.body.equals(other.body);
+  }
+}
+
+class Assign implements AST {
+  constructor(public name: string, public value: AST) {}
+
+  emit(env: Environment) {
+    this.value.emit(env);
+    let offset = env.locals.get(this.name);
+    if (offset) {
+      emit(`  str r0, [fp, #${offset}]`);
+    } else {
+      throw Error(`Undefined variable: ${this.name}`);
+    }
+  }
+
+  equals(other: AST) {
+    return other instanceof Assign &&
+      this.name === other.name &&
+      this.value.equals(other.value);
+  }
+}
+
+class Var implements AST {
+  constructor(public name: string, public value: AST) {}
+
+  emit(env: Environment) {
+    this.value.emit(env);
+    emit(`  push {r0, ip}`);
+    env.locals.set(this.name, env.nextLocalOffset - 4);
+    env.nextLocalOffset -= 8;
+  }
+
+  equals(other: AST) {
+    return other instanceof Var &&
+      this.name === other.name &&
+      this.value.equals(other.value);
+  }
+}
+
+test("Parser integration test", () => {
+  let source = `
+    function factorial(n) {
+      var result = 1;
+      while (n != 1) {
+        result = result * n;
+        n = n - 1;
+      }
+      return result;
+    }
+  `;
+
+  let expected = new Block([
+    new FunctionDefinition("factorial", ["n"], new Block([
+      new Var("result", new Integer(1)),
+      new While(new NotEqual(new Id("n"), new Integer(1)), new Block([
+        new Assign("result", new Multiply(new Id("result"), new Id("n"))),
+        new Assign("n", new Subtract(new Id("n"), new Integer(1))),
+      ])),
+      new Return(new Id("result")),
+    ])),
+  ]);
+
+  let result = parser.parseStringToCompletion(source);
+
+  console.assert(result.equals(expected));
+});
+
+
+
 
 let referenceAst: AST = new Block([
   new FunctionDefinition("main", [], new Block([
@@ -754,8 +892,6 @@ let referenceAst: AST = new Block([
 
 ]);
 
-let emptyEnv: Environment = new Map();
-
 (function testIntegration() {
   let source = `
     function main() {
@@ -787,6 +923,13 @@ let emptyEnv: Environment = new Map();
       assert42(42);
       assert1234(1, 2, 3, 4);
 
+      //assert(rand() != 42);
+      //assert(putchar() != 1);
+
+      //while (1) {
+      //  assert(1);
+      //}
+
       // Test If
       if (1)
 	assert(1);
@@ -798,6 +941,27 @@ let emptyEnv: Environment = new Map();
       } else {
         assert(1);
       }
+
+      assert(factorial(5) == 120);
+
+      var x = 4 + 2 * (12 - 2);
+      var y = 3 * (5 + 1);
+      var z = x + y;
+      assert(z == 42);
+
+      var a = 1;
+      assert(a == 1);
+      a = 0;
+      assert(a == 0);
+
+      // Test while loops
+      var i = 0;
+      while (i != 3) {
+	i = i + 1;
+      }
+      assert(i == 3);
+
+      assert(factorial2(5) == 120);
     }
 
     function return42() { return 42; }
@@ -811,11 +975,36 @@ let emptyEnv: Environment = new Map();
       assert(c == 3);
       assert(d == 4);
     }
+
+    function assert(x) {
+      if (x) {
+	putchar(46);
+      } else {
+	putchar(70);
+      }
+    }
+
+    function factorial(n) {
+      if (n == 0) {
+        return 1;
+      } else {
+        return n * factorial(n - 1);
+      }
+    }
+
+    function factorial2(n) {
+      var result = 1;
+      while (n != 1) {
+        result = result * n;
+	n = n - 1;
+      }
+      return result;
+    }
   `;
 
   let ast = parser.parseStringToCompletion(source);
 
-  ast.emit(emptyEnv);
+  ast.emit(new Environment());
 })();
 
 
