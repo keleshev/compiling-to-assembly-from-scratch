@@ -19,17 +19,3 @@ test.s: compiler.js
 
 clean: phony
 	rm *.exe *.s *.js
-
-# Legacy:
-
-default: phony
-	ocaml c.ml > tmp.s && make tmp.exe
-
-%.exe: %.s phony
-	@arm-linux-gnueabihf-gcc -static -o $@ $<
-	@-qemu-arm-static $@; echo "\nExit code: $$?"
-	@rm -f $@
-
-ts: phony
-	tsc --target ESNEXT compiler.ts && node compiler.js | tee /dev/tty > tmp.s && make tmp.exe
-

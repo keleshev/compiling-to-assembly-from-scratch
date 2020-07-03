@@ -962,6 +962,8 @@ let referenceAst: AST = new Block([
       assert(i == 3);
 
       assert(factorial2(5) == 120);
+
+      putchar(10); // Newline
     }
 
     function return42() { return 42; }
