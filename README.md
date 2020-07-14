@@ -31,7 +31,7 @@ No emulation or cross-assembling necessary.
 
 ## x86-64 Linux
 
-> This assumes `apt-get` package manager. 
+> This assumes `apt-get` package manager.
 
 Install TypeScript (and Node, as a dependency):
 
@@ -70,3 +70,9 @@ Install GCC toolchain that targets 32-bit ARM:
 
 
 -->
+
+
+## Contribution
+
+You are welcome to contribute your version of the book's compiler.
+Make a pull request into the `contrib` directory.
