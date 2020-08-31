@@ -1,4 +1,4 @@
-/* vim: ft=javascript sw=2 */
+// vim: ft=javascript sw=2
 let emit = console.log;
 let test = (name: string, callback: () => void) => callback();
 
@@ -56,7 +56,6 @@ class Parser<T> {
     return new Parser(source => { throw Error(source.string.slice(source.index)) });
   }
 
-  
   or(parser: Parser<T>): Parser<T> {
     return new Parser((source) => {
       let result = this.parse(source);
@@ -66,12 +65,8 @@ class Parser<T> {
         return parser.parse(source);
     });
   }
-  static zeroOrMore<U>(parser: Parser<U>): Parser<Array<U>> {
-    // zeroOrMore: (parser zeroOrMore(parser))?
-    //return parser.bind(item => 
-    //  zeroOrMore(parser).bind(items => 
-    //    constant([item, ...items]))).or(constant([]));
 
+  static zeroOrMore<U>(parser: Parser<U>): Parser<Array<U>> {
     return new Parser(source => {
       let results = [];
       let item;
@@ -103,7 +98,6 @@ class Parser<T> {
     return this.bind((value) => constant(callback(value)));
   }
 
-  // TODO Do we really need this? This is barely used.
   static maybe<U>(parser: Parser<U>): Parser<U | null> {
     return parser.or(constant(null));
   }
@@ -150,10 +144,10 @@ let token = (pattern) =>
 // Keywords
 let FUNCTION = token(/function\b/y);
 let IF = token(/if\b/y);
-let WHILE = token(/while\b/y);  // TODO
+let WHILE = token(/while\b/y);
 let ELSE = token(/else\b/y);
 let RETURN = token(/return\b/y);
-let VAR = token(/var\b/y);  // TODO
+let VAR = token(/var\b/y);
 
 let COMMA = token(/[,]/y);
 let SEMICOLON = token(/;/y);
@@ -179,8 +173,7 @@ let PLUS = token(/[+]/y).map((_) => Add);
 let MINUS = token(/[-]/y).map((_) => Subtract);
 let STAR = token(/[*]/y).map((_) => Multiply);
 let SLASH = token(/[\/]/y).map((_) => Divide);
-let ASSIGN = token(/=/y).map((_) => Assign); // TODO
-
+let ASSIGN = token(/=/y).map((_) => Assign);
 
 
 let expression: Parser<AST> = 
@@ -202,7 +195,6 @@ let call: Parser<AST> =
           ? new Assert(args[0])
 	  : new Call(callee, args))))));
 
-
 // atom <- call / ID / INTEGER / LEFT_PAREN expression RIGHT_PAREN
 let atom: Parser<AST> =
   call.or(id).or(INTEGER).or(LEFT_PAREN.and(expression).bind((e) =>
@@ -213,28 +205,6 @@ let unary: Parser<AST> =
   maybe(NOT).bind((not) =>
     atom.map((term) => not ? new Not(term) : term));
 
-
-// (v1) product <- atom (STAR atom)*
-//let product: Parser<AST> =
-//  atom.bind((term) =>
-//    zeroOrMore(STAR.and(atom)).map((terms) =>
-//      terms.reduce((left, right) =>
-//        new Multiply(left, right), term)));
-
-// (v1) sum <- product (PLUS product)*
-//let sum: Parser<AST> =
-//  product.bind((term) =>
-//    zeroOrMore(PLUS.and(product)).map((terms) =>
-//      terms.reduce((left, right) => new Add(left, right), term)));
-
-// (v2) sum <- product ((PLUS / MINUS) product)*
-//let sum: Parser<AST> =
-//  product.bind((term) =>
-//    zeroOrMore(PLUS.or(MINUS).bind((operator) =>
-//      product.map((term) => ({operator, term})))).map((operator_terms) =>
-//	operator_terms.reduce((left, {operator, term}) =>
-//	  new operator(left, term), term)));
-//
 let infix = (operatorParser, termParser) =>
   termParser.bind((term) =>
     zeroOrMore(operatorParser.bind((operator) =>
@@ -242,16 +212,6 @@ let infix = (operatorParser, termParser) =>
 	constant({operator, term})))).map((operatorTerms) =>
           operatorTerms.reduce((left, {operator, term}) =>
             new operator(left, term), term)));
-
-// (real v1) product <- unary ((STAR / SLASH) unary)*
-//let product =
-//  unary.bind((first) =>
-//    zeroOrMore(STAR.or(SLASH).bind((operator) =>
-//      unary.bind((term) => 
-//	constant({operator, term})))).map((operatorTerms) =>
-//	  operatorTerms.reduce((left, {operator, term}) =>
-//	    new operator(left, term), first)));
-//
 
 // product <- unary ((STAR / SLASH) unary)*
 let product = infix(STAR.or(SLASH), unary);
@@ -264,7 +224,6 @@ let comparison = infix(EQUAL.or(NOT_EQUAL), sum);
 
 // expression <- comparison
 expression.parse = comparison.parse;
-
 
 let statement: Parser<AST> =
   Parser.error("statement parser used before definition");
@@ -293,7 +252,7 @@ let whileStatement: Parser<AST> =
     RIGHT_PAREN.and(statement).bind((body) =>
       constant(new While(conditional, body))));
 
-// varStatement <- TODO
+// varStatement <-
 //   VAR ID ASSIGN expression SEMICOLON
 let varStatement: Parser<AST> =
   VAR.and(ID).bind((name) =>
@@ -310,12 +269,6 @@ let assignmentStatement: Parser<AST> =
 let blockStatement: Parser<AST> =
   LEFT_BRACE.and(zeroOrMore(statement)).bind((statements) =>
     RIGHT_BRACE.and(constant(new Block(statements))));
-
-// parameters <- ((ID COMMA)* ID)?
-//let parameters: Parser<Array<string>> =
-//  zeroOrMore(ID.bind((term) =>
-//    COMMA.map((_) => term))).bind((args) =>
-//      ID.map((arg) => args.concat(arg))).or(constant([]));
 
 // parameters <- (ID (COMMA ID)*)?
 let parameters: Parser<Array<string>> =
@@ -359,17 +312,6 @@ let parser: Parser<AST> =
   ignored.and(zeroOrMore(statement)).map((statements) =>
     new Block(statements));
 
-
-//console.error(tokenize(`
-//function factorial(n) {
-//  if (n == 0) {
-//    return 1;
-//  } else {
-//    return n * factorial(n - 1);
-//  }
-//}
-//`));
-
 class Label {
   static counter = 0;
   value: number;
@@ -383,11 +325,6 @@ class Label {
   }
 }
 
-// TODO abstract base class?
-//type AST = Integer | Not | Equal | NotEqual
-//  | Add | Subtract | Multiply | Call | Id
-//  | Assert | Exit | Block | Return | If | FunctionDefinition
-
 class Environment {
   constructor(public locals: Map<string, number> = new Map(),
               public nextLocalOffset: number = 0) {}
@@ -397,12 +334,6 @@ interface AST {
   emit(Environment): void; 
   equals(AST): boolean;
 }
-
-//abstract class AST {
-//  abstract emit(): void; 
-//  abstract equals(AST): boolean;
-//}
-
 
 class Main implements AST {
   constructor(public statements: Array<AST>) {}
@@ -455,7 +386,6 @@ class Integer implements AST {
       this.value === other.value;
   }
 }
-
 
 class Not implements AST {
   constructor(public term: AST) {}
@@ -762,7 +692,6 @@ class Return implements AST {
   }
 }
 
-
 class While implements AST {
   constructor(public conditional: AST, public body: AST) {}
 
@@ -823,6 +752,45 @@ class Var implements AST {
   }
 }
 
+test("Expression parser", () => {
+  console.log();
+  let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
+  let parse = (string) => expression.parseStringToCompletion(string);
+
+  console.assert(parse('x + y + z').equals(new Add(new Add(x, y), z)));
+  console.assert(parse('x + y * z').equals(new Add(x, new Multiply(y, z))));
+  console.assert(parse('x * y + z').equals(new Add(new Multiply(x, y), z)));
+  console.assert(parse('(x + y) * z').equals(new Multiply(new Add(x, y), z)));
+  console.assert(parse('x == y + z').equals(new Equal(x, new Add(y, z))));
+  console.assert(parse('x + y == z').equals(new Equal(new Add(x, y), z)));
+
+  console.assert(parse('f()').equals(new Call('f', [])));
+  console.assert(parse('f(x)').equals(new Call('f', [x])));
+  console.assert(parse('f(x, y, z)').equals(new Call('f', [x, y, z])));
+});
+
+test("Statement parser", () => {
+  console.log();
+  let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
+  let parse = (string) => statement.parseStringToCompletion(string);
+
+  console.assert(parse('return x;').equals(new Return(x)));
+  console.assert(parse('returnx;').equals(new Id('returnx')));
+  console.assert(parse('x + y;').equals(new Add(x, y)));
+
+  console.assert(parse('if (x) return y; else return z;').equals(
+    new If(x, new Return(y), new Return(z))));
+
+  console.assert(parse('{}').equals(new Block([])));
+  console.assert(parse('{ x; y; }').equals(new Block([x, y])));
+
+  console.assert(parse('if (x) { return y; } else { return z; }').equals(
+    new If(x, new Block([new Return(y)]), new Block([new Return(z)]))));
+
+  console.assert(parse('function id(x) { return x; }').equals(
+    new FunctionDefinition('id', ['x'], new Block([new Return(x)]))));
+});
+
 test("Parser integration test", () => {
   let source = `
     function factorial(n) {
@@ -851,48 +819,7 @@ test("Parser integration test", () => {
   console.assert(result.equals(expected));
 });
 
-
-
-
-let referenceAst: AST = new Block([
-  new FunctionDefinition("main", [], new Block([
-
-    // Test immediate
-    new Assert(new Integer(1)),
-
-    // Test not
-    new Assert(new Not(new Integer(0))),
-    new Assert(new Not(new Not(new Integer(42)))),
-
-    // Test equal
-    new Assert(new Equal(new Integer(42), new Integer(42))),
-    new Assert(new Not(new Equal(new Integer(0), new Integer(42)))),
-
-    // Test not equal
-    new Assert(new Not(new NotEqual(new Integer(42), new Integer(42)))),
-    new Assert(new NotEqual(new Integer(0), new Integer(42))),
-
-    // Test return value and zero parameters
-    new Assert(new Equal(new Integer(42), new Call("return42", []))),
-    new Assert(new Not(new Call("returnNothing", []))),
-
-    // TODO: Test parameters
-
-    // Test if-else
-    new If(new Integer(1),
-           new Assert(new Integer(1)),
-           new Assert(new Integer(0))),
-    new If(new Integer(0),
-           new Assert(new Integer(0)),
-           new Assert(new Integer(1))),
-  ])),
-
-  new FunctionDefinition("return42", [], new Return(new Integer(42))),
-  new FunctionDefinition("returnNothing", [], new Block([])),
-
-]);
-
-(function testIntegration() {
+test("End-to-end test", () => {
   let source = `
     function main() {
       // Test Integer
@@ -1007,49 +934,4 @@ let referenceAst: AST = new Block([
   let ast = parser.parseStringToCompletion(source);
 
   ast.emit(new Environment());
-})();
-
-
-
-//ast.emit();
-
-
-(function testParserExpression() {
-  console.log();
-  let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
-  let parse = (string) => expression.parseStringToCompletion(string);
-
-  console.assert(parse('x + y + z').equals(new Add(new Add(x, y), z)));
-  console.assert(parse('x + y * z').equals(new Add(x, new Multiply(y, z))));
-  console.assert(parse('x * y + z').equals(new Add(new Multiply(x, y), z)));
-  console.assert(parse('(x + y) * z').equals(new Multiply(new Add(x, y), z)));
-  console.assert(parse('x == y + z').equals(new Equal(x, new Add(y, z))));
-  console.assert(parse('x + y == z').equals(new Equal(new Add(x, y), z)));
-
-  console.assert(parse('f()').equals(new Call('f', [])));
-  console.assert(parse('f(x)').equals(new Call('f', [x])));
-  console.assert(parse('f(x, y, z)').equals(new Call('f', [x, y, z])));
-})();
-
-(function testParserStatement() {
-  console.log();
-  let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
-  let parse = (string) => statement.parseStringToCompletion(string);
-
-  console.assert(parse('return x;').equals(new Return(x)));
-  console.assert(parse('returnx;').equals(new Id('returnx')));
-  console.assert(parse('x + y;').equals(new Add(x, y)));
-
-  console.assert(parse('if (x) return y; else return z;').equals(
-    new If(x, new Return(y), new Return(z))));
-
-  console.assert(parse('{}').equals(new Block([])));
-  console.assert(parse('{ x; y; }').equals(new Block([x, y])));
-
-  console.assert(parse('if (x) { return y; } else { return z; }').equals(
-    new If(x, new Block([new Return(y)]), new Block([new Return(z)]))));
-
-  console.assert(parse('function id(x) { return x; }').equals(
-    new FunctionDefinition('id', ['x'], new Block([new Return(x)]))));
-})();
-
+});
