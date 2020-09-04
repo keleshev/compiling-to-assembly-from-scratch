@@ -477,11 +477,13 @@ function assertType(expected: Type, got: Type): void {
 interface AST {
   emit(Environment): void; 
   equals(AST): boolean;
-  typeCheck(TypeEnvironment): Type;
+  visit<T>(v: Visitor<T>): T;
 }
 
 class Main implements AST {
   constructor(public statements: Array<AST>) {}
+
+  visit<T>(v: Visitor<T>) { return v.visitMain(this); }
 
   emit(env: Environment) {
     emit(`.global main`);
@@ -492,11 +494,6 @@ class Main implements AST {
     );
     emit(`  mov r0, #0`);
     emit(`  pop {fp, pc}`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    this.statements.forEach((statement) => statement.typeCheck(env));
-    return new VoidType();
   }
 
   equals(other: AST) {
@@ -510,17 +507,14 @@ class Main implements AST {
 class Assert implements AST {
   constructor(public condition: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitAssert(this); }
+
   emit(env: Environment) {
     this.condition.emit(env);
     emit(`  cmp r0, #1`);
     emit(`  moveq r0, #'.'`);
     emit(`  movne r0, #'F'`);
     emit(`  bl putchar`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    assertType(new BoolType(), this.condition.typeCheck(env));
-    return new VoidType();
   }
 
   equals(other: AST) {
@@ -532,12 +526,10 @@ class Assert implements AST {
 class Integer implements AST {
   constructor(public value: number) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitInteger(this); }
+
   emit(env: Environment) {
     emit(`  ldr r0, =${this.value}`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    return new IntegerType(); 
   }
 
   equals(other: AST) {
@@ -549,12 +541,10 @@ class Integer implements AST {
 class Bool implements AST {
   constructor(public value: boolean) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitBool(this); }
+
   emit(env: Environment) {
     new Integer(Number(this.value)).emit(env)
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    return new BoolType();
   }
 
   equals(other: AST) {
@@ -566,16 +556,13 @@ class Bool implements AST {
 class Not implements AST {
   constructor(public term: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitNot(this); }
+
   emit(env: Environment) {
     this.term.emit(env);
     emit(`  cmp r0, #0`);
     emit(`  moveq r0, #1`);
     emit(`  movne r0, #0`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    assertType(new BoolType(), this.term.typeCheck(env));
-    return new BoolType();
   }
 
   equals(other: AST) {
@@ -586,6 +573,8 @@ class Not implements AST {
 class Equal implements AST {
   constructor(public left: AST, public right: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitEqual(this); }
+
   emit(env: Environment) {
     this.left.emit(env);
     emit(`  push {r0, ip}`);
@@ -594,13 +583,6 @@ class Equal implements AST {
     emit(`  cmp r0, r1`);
     emit(`  moveq r0, #1`);
     emit(`  movne r0, #0`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    let leftType = this.left.typeCheck(env);
-    let rightType = this.right.typeCheck(env);
-    assertType(leftType, rightType);
-    return new BoolType();
   }
 
   equals(other: AST) {
@@ -613,6 +595,8 @@ class Equal implements AST {
 class NotEqual implements AST {
   constructor(public left: AST, public right: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitNotEqual(this); }
+
   emit(env: Environment) {
     this.left.emit(env);
     emit(`  push {r0, ip}`);
@@ -621,13 +605,6 @@ class NotEqual implements AST {
     emit(`  cmp r0, r1`);
     emit(`  movne r0, #1`);
     emit(`  moveq r0, #0`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    let leftType = this.left.typeCheck(env);
-    let rightType = this.right.typeCheck(env);
-    assertType(leftType, rightType);
-    return new BoolType();
   }
 
   equals(other: AST) {
@@ -640,18 +617,14 @@ class NotEqual implements AST {
 class Add implements AST {
   constructor(public left: AST, public right: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitAdd(this); }
+
   emit(env: Environment) {
     this.left.emit(env);
     emit(`  push {r0, ip}`);
     this.right.emit(env);
     emit(`  pop {r1, ip}`);
     emit(`  add r0, r1, r0`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    assertType(new IntegerType(), this.left.typeCheck(env));
-    assertType(new IntegerType(), this.right.typeCheck(env));
-    return new IntegerType();
   }
 
   equals(other: AST) {
@@ -664,18 +637,14 @@ class Add implements AST {
 class Subtract implements AST {
   constructor(public left: AST, public right: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitSubtract(this); }
+
   emit(env: Environment) {
     this.left.emit(env);
     emit(`  push {r0, ip}`);
     this.right.emit(env);
     emit(`  pop {r1, ip}`);
     emit(`  sub r0, r1, r0`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    assertType(new IntegerType(), this.left.typeCheck(env));
-    assertType(new IntegerType(), this.right.typeCheck(env));
-    return new IntegerType();
   }
 
   equals(other: AST) {
@@ -688,18 +657,14 @@ class Subtract implements AST {
 class Multiply implements AST {
   constructor(public left: AST, public right: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitMultiply(this); }
+
   emit(env: Environment) {
     this.left.emit(env);
     emit(`  push {r0, ip}`);
     this.right.emit(env);
     emit(`  pop {r1, ip}`);
     emit(`  mul r0, r1, r0`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    assertType(new IntegerType(), this.left.typeCheck(env));
-    assertType(new IntegerType(), this.right.typeCheck(env));
-    return new IntegerType();
   }
 
   equals(other: AST) {
@@ -712,18 +677,14 @@ class Multiply implements AST {
 class Divide implements AST {
   constructor(public left: AST, public right: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitDivide(this); }
+
   emit(env: Environment) {
     this.left.emit(env);
     emit(`  push {r0, ip}`);
     this.right.emit(env);
     emit(`  pop {r1, ip}`);
     emit(`  udiv r0, r1, r0`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    assertType(new IntegerType(), this.left.typeCheck(env));
-    assertType(new IntegerType(), this.right.typeCheck(env));
-    return new IntegerType();
   }
 
   equals(other: AST) {
@@ -735,6 +696,8 @@ class Divide implements AST {
 
 class Call implements AST {
   constructor(public callee: string, public args: Array<AST>) {}
+
+  visit<T>(v: Visitor<T>) { return v.visitCall(this); }
 
   emit(env: Environment) {
     let count = this.args.length;
@@ -756,18 +719,6 @@ class Call implements AST {
     }
   }
 
-  typeCheck(env: TypeEnvironment) {
-    let expected = env.functions.get(this.callee);
-    if (!expected) {
-      throw Error(`Type error: function ${this.callee} is not defined`); 
-    }
-    let argsTypes = new Map();
-    this.args.forEach((arg, i) => argsTypes.set(`x${i}`, arg.typeCheck(env)));
-    let got = new FunctionType(argsTypes, expected.returnType);
-    assertType(expected, got);
-    return expected.returnType;
-  }
-
   equals(other: AST) {
     return other instanceof Call &&
       this.callee === other.callee &&
@@ -778,6 +729,8 @@ class Call implements AST {
 
 class ArrayNode implements AST {
   constructor(public args: Array<AST>) {}
+
+  visit<T>(v: Visitor<T>) { return v.visitArrayNode(this); }
 
   emit(env: Environment) {
     emit(`  push {r4, ip}`);
@@ -794,19 +747,6 @@ class ArrayNode implements AST {
     emit(`  pop {r4, ip}`);
   }
 
-  typeCheck(env: TypeEnvironment) {
-    if (this.args.length == 0) {
-      throw Error("Type error: can't infer type of an empty array");
-    }
-    let argsTypes = this.args.map((arg) => arg.typeCheck(env));
-    // Assert all arguments have the same type, pairwise
-    let elementType = argsTypes.reduce((prev, next) => {
-      assertType(prev, next);
-      return prev;
-    });
-    return new ArrayType(elementType);
-  }
-
   equals(other: AST) {
     return other instanceof ArrayNode &&
       this.args.length === other.args.length &&
@@ -816,6 +756,8 @@ class ArrayNode implements AST {
 
 class ArrayLookup implements AST {
   constructor(public array: AST, public index: AST) {}
+
+  visit<T>(v: Visitor<T>) { return v.visitArrayLookup(this); }
 
   emit(env: Environment) {
     this.array.emit(env);
@@ -829,16 +771,6 @@ class ArrayLookup implements AST {
     emit(`  ldrlo r0, [r1, +r0, lsl #2]`);
   }
 
-  typeCheck(env: TypeEnvironment) {
-    assertType(new IntegerType(), this.index.typeCheck(env));
-    let type = this.array.typeCheck(env);
-    if (type instanceof ArrayType) {
-      return type.element;
-    } else {
-      throw Error(`Type error: expected an array, but got ${type}`);
-    }
-  }
-
   equals(other: AST) {
     return other instanceof ArrayLookup && 
       this.array.equals(other.array) &&
@@ -849,6 +781,8 @@ class ArrayLookup implements AST {
 class Exit implements AST {
   constructor(public term: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitExit(this); }
+
   emit(env) {
     let syscallNumber = 1;
     emit(`  mov r0, #0`);
@@ -856,11 +790,6 @@ class Exit implements AST {
     this.term.emit(env);
     emit(`  mov r7, #${syscallNumber}`);
     emit(`  swi #0`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    assertType(new IntegerType(), this.term.typeCheck(env));
-    return new VoidType();
   }
 
   equals(other: AST) {
@@ -872,15 +801,12 @@ class Exit implements AST {
 class Block implements AST {
   constructor(public statements: Array<AST>) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitBlock(this); }
+
   emit(env: Environment) {
     this.statements.forEach((statement) =>
       statement.emit(env)
     );
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    this.statements.forEach((statement) => statement.typeCheck(env));
-    return new VoidType();
   }
 
   equals(other: AST) {
@@ -896,6 +822,8 @@ class If implements AST {
               public consequence: AST,
 	      public alternative: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitIf(this); }
+
   emit(env: Environment) {
     let ifFalseLabel = new Label();
     let endIfLabel = new Label();
@@ -907,13 +835,6 @@ class If implements AST {
     emit(`${ifFalseLabel}:`);
     this.alternative.emit(env);
     emit(`${endIfLabel}:`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    this.conditional.typeCheck(env);
-    this.consequence.typeCheck(env);
-    this.alternative.typeCheck(env);
-    return new VoidType();
   }
 
   equals(other: AST) {
@@ -928,6 +849,8 @@ class FunctionDefinition implements AST {
   constructor(public name: string,
               public signature: FunctionType,
               public body: AST) {}
+
+  visit<T>(v: Visitor<T>) { return v.visitFunctionDefinition(this); }
 
   emit(_: Environment) {
     if (this.signature.parameters.size > 4) 
@@ -968,20 +891,6 @@ class FunctionDefinition implements AST {
     emit(`  pop {fp, pc}`);
   }
 
-  typeCheck(env: TypeEnvironment) {
-    if (env.currentFunctionReturnType) {
-      throw Error("Nexted functions are not supported");
-    }
-    env.functions.set(this.name, this.signature);
-    let localEnv = new TypeEnvironment(
-      new Map(this.signature.parameters),
-      env.functions,
-      this.signature.returnType,
-    );
-    this.body.typeCheck(localEnv);
-    return new VoidType();
-  }
-
   equals(other: AST) {
     return other instanceof FunctionDefinition &&
       this.name === other.name &&
@@ -993,6 +902,8 @@ class FunctionDefinition implements AST {
 class Id implements AST {
   constructor(public value: string) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitId(this); }
+
   emit(env: Environment) {
     let offset = env.locals.get(this.value);
     if (offset) {
@@ -1001,14 +912,6 @@ class Id implements AST {
       console.log(env);
       throw Error(`Undefined variable: ${this.value}`);
     }
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    let type = env.locals.get(this.value);
-    if (!type) {
-      throw Error(`Type error: undefined variable ${this.value}`);
-    }
-    return type;
   }
 
   equals(other: AST) {
@@ -1020,20 +923,12 @@ class Id implements AST {
 class Return implements AST {
   constructor(public term: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitReturn(this); }
+
   emit(env) {
     this.term.emit(env);
     emit(`  mov sp, fp`);
     emit(`  pop {fp, pc}`);
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    let type = this.term.typeCheck(env);
-    if (env.currentFunctionReturnType) {
-      assertType(env.currentFunctionReturnType, type);
-      return new VoidType();
-    } else {
-      throw Error("Encountered return statement outside any function");
-    }
   }
 
   equals(other: AST) {
@@ -1044,6 +939,8 @@ class Return implements AST {
 
 class While implements AST {
   constructor(public conditional: AST, public body: AST) {}
+
+  visit<T>(v: Visitor<T>) { return v.visitWhile(this); }
 
   emit(env: Environment) {
     let loopStart = new Label();
@@ -1058,12 +955,6 @@ class While implements AST {
     emit(`${loopEnd}:`);
   }
 
-  typeCheck(env: TypeEnvironment) {
-    this.conditional.typeCheck(env);
-    this.body.typeCheck(env);
-    return new VoidType();
-  }
-
   equals(other: AST) {
     return other instanceof While &&
       this.conditional.equals(other.conditional) &&
@@ -1074,6 +965,8 @@ class While implements AST {
 class Assign implements AST {
   constructor(public name: string, public value: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitAssign(this); }
+
   emit(env: Environment) {
     this.value.emit(env);
     let offset = env.locals.get(this.name);
@@ -1082,16 +975,6 @@ class Assign implements AST {
     } else {
       throw Error(`Undefined variable: ${this.name}`);
     }
-  }
-
-  typeCheck(env: TypeEnvironment) {
-    let variableType = env.locals.get(this.name);
-    if (!variableType) {
-      throw Error(`Type error: assignment to an undefined variable ${this.name}`);
-    }
-    let valueType = this.value.typeCheck(env);
-    assertType(variableType, valueType);
-    return new VoidType();
   }
 
   equals(other: AST) {
@@ -1104,6 +987,8 @@ class Assign implements AST {
 class Var implements AST {
   constructor(public name: string, public value: AST) {}
 
+  visit<T>(v: Visitor<T>) { return v.visitVar(this); }
+
   emit(env: Environment) {
     this.value.emit(env);
     emit(`  push {r0, ip}`);
@@ -1111,16 +996,210 @@ class Var implements AST {
     env.nextLocalOffset -= 8;
   }
 
-  typeCheck(env: TypeEnvironment) {
-    let type = this.value.typeCheck(env);
-    env.locals.set(this.name, type);
-    return new VoidType();
-  }
-
   equals(other: AST) {
     return other instanceof Var &&
       this.name === other.name &&
       this.value.equals(other.value);
+  }
+}
+
+
+interface Visitor<T> {
+  visitMain(node: Main): T;
+  visitAssert(node: Assert): T;
+  visitInteger(node: Integer): T;
+  visitBool(node: Bool): T;
+  visitNot(node: Not): T;
+  visitEqual(node: Equal): T;
+  visitNotEqual(node: NotEqual): T;
+  visitAdd(node: Add): T;
+  visitSubtract(node: Subtract): T;
+  visitMultiply(node: Multiply): T;
+  visitDivide(node: Divide): T;
+  visitCall(node: Call): T;
+  visitArrayNode(node: ArrayNode): T;
+  visitArrayLookup(node: ArrayLookup): T;
+  visitExit(node: Exit): T;
+  visitBlock(node: Block): T;
+  visitIf(node: If): T;
+  visitFunctionDefinition(node: FunctionDefinition): T;
+  visitId(node: Id): T;
+  visitReturn(node: Return): T;
+  visitWhile(node: While): T;
+  visitAssign(node: Assign): T;
+  visitVar(node: Var): T;
+}
+
+class TypeChecker implements Visitor<Type> {
+  constructor(public locals: Map<string, Type> = new Map(),
+              public functions: Map<string, FunctionType> = new Map(),
+              public currentFunctionReturnType: Type | null = null) {}
+
+  visitMain(node: Main) {
+    node.statements.forEach((statement) => statement.visit(this));
+    return new VoidType();
+  }
+
+  visitAssert(node: Assert) {
+    assertType(new BoolType(), node.condition.visit(this));
+    return new VoidType();
+  }
+
+  visitInteger(node: Integer) {
+    return new IntegerType();
+  }
+
+  visitBool(node: Bool) {
+    return new BoolType();
+  }
+
+  visitNot(node: Not) {
+    assertType(new BoolType(), node.term.visit(this));
+    return new BoolType();
+  }
+
+  visitEqual(node: Equal) {
+    let leftType = node.left.visit(this);
+    let rightType = node.right.visit(this);
+    assertType(leftType, rightType);
+    return new BoolType();
+  }
+
+  visitNotEqual(node: NotEqual) {
+    let leftType = node.left.visit(this);
+    let rightType = node.right.visit(this);
+    assertType(leftType, rightType);
+    return new BoolType();
+  }
+
+  visitAdd(node: Add) {
+    assertType(new IntegerType(), node.left.visit(this));
+    assertType(new IntegerType(), node.right.visit(this));
+    return new IntegerType();
+  }
+
+  visitSubtract(node: Subtract) {
+    assertType(new IntegerType(), node.left.visit(this));
+    assertType(new IntegerType(), node.right.visit(this));
+    return new IntegerType();
+  }
+
+  visitMultiply(node: Multiply) {
+    assertType(new IntegerType(), node.left.visit(this));
+    assertType(new IntegerType(), node.right.visit(this));
+    return new IntegerType();
+  }
+
+  visitDivide(node: Divide) {
+    assertType(new IntegerType(), node.left.visit(this));
+    assertType(new IntegerType(), node.right.visit(this));
+    return new IntegerType();
+  }
+
+  visitCall(node: Call) {
+    let expected = this.functions.get(node.callee);
+    if (!expected) {
+      throw Error(`Type error: function ${node.callee} is not defined`); 
+    }
+    let argsTypes = new Map();
+    node.args.forEach((arg, i) => argsTypes.set(`x${i}`, arg.visit(this)));
+    let got = new FunctionType(argsTypes, expected.returnType);
+    assertType(expected, got);
+    return expected.returnType;
+  }
+
+  visitArrayNode(node: ArrayNode) {
+    if (node.args.length == 0) {
+      throw Error("Type error: can't infer type of an empty array");
+    }
+    let argsTypes = node.args.map((arg) => arg.visit(this));
+    // Assert all arguments have the same type, pairwise
+    let elementType = argsTypes.reduce((prev, next) => {
+      assertType(prev, next);
+      return prev;
+    });
+    return new ArrayType(elementType);
+  }
+
+  visitArrayLookup(node: ArrayLookup) {
+    assertType(new IntegerType(), node.index.visit(this));
+    let type = node.array.visit(this);
+    if (type instanceof ArrayType) {
+      return type.element;
+    } else {
+      throw Error(`Type error: expected an array, but got ${type}`);
+    }
+  }
+
+  visitExit(node: Exit) {
+    assertType(new IntegerType(), node.term.visit(this));
+    return new VoidType();
+  }
+
+  visitBlock(node: Block) {
+    node.statements.forEach((statement) => statement.visit(this));
+    return new VoidType();
+  }
+
+  visitIf(node: If) {
+    node.conditional.visit(this);
+    node.consequence.visit(this);
+    node.alternative.visit(this);
+    return new VoidType();
+  }
+
+  visitFunctionDefinition(node: FunctionDefinition) {
+    if (this.currentFunctionReturnType) {
+      throw Error("Nexted functions are not supported");
+    }
+    this.functions.set(node.name, node.signature);
+    let visitor = new TypeChecker( 
+      new Map(node.signature.parameters),
+      this.functions,
+      node.signature.returnType,
+    );
+    node.body.visit(visitor);
+    return new VoidType();
+  }
+
+  visitId(node: Id) {
+    let type = this.locals.get(node.value);
+    if (!type) {
+      throw Error(`Type error: undefined variable ${node.value}`);
+    }
+    return type;
+  }
+
+  visitReturn(node: Return) {
+    let type = node.term.visit(this);
+    if (this.currentFunctionReturnType) {
+      assertType(this.currentFunctionReturnType, type);
+      return new VoidType();
+    } else {
+      throw Error("Encountered return statement outside any function");
+    }
+  }
+
+  visitWhile(node: While) {
+    node.conditional.visit(this);
+    node.body.visit(this);
+    return new VoidType();
+  }
+
+  visitAssign(node: Assign) {
+    let variableType = this.locals.get(node.name);
+    if (!variableType) {
+      throw Error(`Type error: assignment to an undefined variable ${node.name}`);
+    }
+    let valueType = node.value.visit(this);
+    assertType(variableType, valueType);
+    return new VoidType();
+  }
+
+  visitVar(node: Var) {
+    let type = node.value.visit(this);
+    this.locals.set(node.name, type);
+    return new VoidType();
   }
 }
 
@@ -1327,13 +1406,13 @@ test("End-to-end test", () => {
 
   let ast = parser.parseStringToCompletion(source);
 
-  let defaultTypeEnvironment = new TypeEnvironment(
+  let typeChecker = new TypeChecker(
     new Map(),
     new Map([
       ["putchar", new FunctionType(new Map([["char", new IntegerType()]]), new VoidType())],
     ]),
   );
-  ast.typeCheck(defaultTypeEnvironment);
+  ast.visit(typeChecker);
 
   ast.emit(new Environment());
 });
