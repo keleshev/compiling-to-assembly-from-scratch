@@ -457,17 +457,6 @@ class FunctionType implements Type {
   } 
 }
 
-class TypeEnvironment {
-  constructor(public locals: Map<string, Type> = new Map(),
-              public functions: Map<string, FunctionType> = new Map(),
-              public currentFunctionReturnType: Type | null = null) {}
-}
-
-class Environment {
-  constructor(public locals: Map<string, number> = new Map(),
-              public nextLocalOffset: number = 0) {}
-}
-
 function assertType(expected: Type, got: Type): void {
   if (!expected.equals(got)) {
     throw Error(`Type error: expected ${expected}, but got ${got}`);
@@ -475,7 +464,6 @@ function assertType(expected: Type, got: Type): void {
 }
 
 interface AST {
-  emit(Environment): void; 
   equals(AST): boolean;
   visit<T>(v: Visitor<T>): T;
 }
@@ -484,17 +472,6 @@ class Main implements AST {
   constructor(public statements: Array<AST>) {}
 
   visit<T>(v: Visitor<T>) { return v.visitMain(this); }
-
-  emit(env: Environment) {
-    emit(`.global main`);
-    emit(`main:`);
-    emit(`  push {fp, lr}`);
-    this.statements.forEach((statement) =>
-      statement.emit(env)
-    );
-    emit(`  mov r0, #0`);
-    emit(`  pop {fp, pc}`);
-  }
 
   equals(other: AST) {
     return other instanceof Main &&
@@ -509,14 +486,6 @@ class Assert implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitAssert(this); }
 
-  emit(env: Environment) {
-    this.condition.emit(env);
-    emit(`  cmp r0, #1`);
-    emit(`  moveq r0, #'.'`);
-    emit(`  movne r0, #'F'`);
-    emit(`  bl putchar`);
-  }
-
   equals(other: AST) {
     return other instanceof Assert && 
       this.condition.equals(other.condition);
@@ -527,10 +496,6 @@ class Integer implements AST {
   constructor(public value: number) {}
 
   visit<T>(v: Visitor<T>) { return v.visitInteger(this); }
-
-  emit(env: Environment) {
-    emit(`  ldr r0, =${this.value}`);
-  }
 
   equals(other: AST) {
     return other instanceof Integer &&
@@ -543,10 +508,6 @@ class Bool implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitBool(this); }
 
-  emit(env: Environment) {
-    new Integer(Number(this.value)).emit(env)
-  }
-
   equals(other: AST) {
     return other instanceof Bool &&
       this.value === other.value;
@@ -558,13 +519,6 @@ class Not implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitNot(this); }
 
-  emit(env: Environment) {
-    this.term.emit(env);
-    emit(`  cmp r0, #0`);
-    emit(`  moveq r0, #1`);
-    emit(`  movne r0, #0`);
-  }
-
   equals(other: AST) {
     return other instanceof Not && this.term.equals(other.term);
   }
@@ -574,16 +528,6 @@ class Equal implements AST {
   constructor(public left: AST, public right: AST) {}
 
   visit<T>(v: Visitor<T>) { return v.visitEqual(this); }
-
-  emit(env: Environment) {
-    this.left.emit(env);
-    emit(`  push {r0, ip}`);
-    this.right.emit(env);
-    emit(`  pop {r1, ip}`);
-    emit(`  cmp r0, r1`);
-    emit(`  moveq r0, #1`);
-    emit(`  movne r0, #0`);
-  }
 
   equals(other: AST) {
     return other instanceof Equal &&
@@ -597,16 +541,6 @@ class NotEqual implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitNotEqual(this); }
 
-  emit(env: Environment) {
-    this.left.emit(env);
-    emit(`  push {r0, ip}`);
-    this.right.emit(env);
-    emit(`  pop {r1, ip}`);
-    emit(`  cmp r0, r1`);
-    emit(`  movne r0, #1`);
-    emit(`  moveq r0, #0`);
-  }
-
   equals(other: AST) {
     return other instanceof NotEqual &&
       this.left.equals(other.left) &&
@@ -618,14 +552,6 @@ class Add implements AST {
   constructor(public left: AST, public right: AST) {}
 
   visit<T>(v: Visitor<T>) { return v.visitAdd(this); }
-
-  emit(env: Environment) {
-    this.left.emit(env);
-    emit(`  push {r0, ip}`);
-    this.right.emit(env);
-    emit(`  pop {r1, ip}`);
-    emit(`  add r0, r1, r0`);
-  }
 
   equals(other: AST) {
     return other instanceof Add &&
@@ -639,14 +565,6 @@ class Subtract implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitSubtract(this); }
 
-  emit(env: Environment) {
-    this.left.emit(env);
-    emit(`  push {r0, ip}`);
-    this.right.emit(env);
-    emit(`  pop {r1, ip}`);
-    emit(`  sub r0, r1, r0`);
-  }
-
   equals(other: AST) {
     return other instanceof Subtract &&
       this.left.equals(other.left) &&
@@ -658,14 +576,6 @@ class Multiply implements AST {
   constructor(public left: AST, public right: AST) {}
 
   visit<T>(v: Visitor<T>) { return v.visitMultiply(this); }
-
-  emit(env: Environment) {
-    this.left.emit(env);
-    emit(`  push {r0, ip}`);
-    this.right.emit(env);
-    emit(`  pop {r1, ip}`);
-    emit(`  mul r0, r1, r0`);
-  }
 
   equals(other: AST) {
     return other instanceof Multiply &&
@@ -679,14 +589,6 @@ class Divide implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitDivide(this); }
 
-  emit(env: Environment) {
-    this.left.emit(env);
-    emit(`  push {r0, ip}`);
-    this.right.emit(env);
-    emit(`  pop {r1, ip}`);
-    emit(`  udiv r0, r1, r0`);
-  }
-
   equals(other: AST) {
     return other instanceof Divide &&
       this.left.equals(other.left) &&
@@ -698,26 +600,6 @@ class Call implements AST {
   constructor(public callee: string, public args: Array<AST>) {}
 
   visit<T>(v: Visitor<T>) { return v.visitCall(this); }
-
-  emit(env: Environment) {
-    let count = this.args.length;
-    if (count === 0) {
-      emit(`  bl ${this.callee}`);
-    } else if (count === 1) {
-      this.args[0].emit(env);
-      emit(`  bl ${this.callee}`);
-    } else if (count >= 2 && count <= 4) {
-      emit(`  sub sp, sp, #16`);
-      this.args.forEach((arg, i) => {
-        arg.emit(env);
-        emit(`  str r0, [sp, #${4 * i}]`);
-      });
-      emit(`  pop {r0, r1, r2, r3}`);
-      emit(`  bl ${this.callee}`);
-    } else {
-      throw Error("More than 4 arguments are not supported");
-    }
-  }
 
   equals(other: AST) {
     return other instanceof Call &&
@@ -732,21 +614,6 @@ class ArrayNode implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitArrayNode(this); }
 
-  emit(env: Environment) {
-    emit(`  push {r4, ip}`);
-    emit(`  ldr r0, =${4 * (this.args.length + 1)}`);
-    emit(`  bl malloc`);
-    emit(`  mov r4, r0`);
-    emit(`  ldr r0, =${this.args.length}`);
-    emit(`  str r0, [r4]`);
-    this.args.forEach((arg, i) => {
-      arg.emit(env);
-      emit(`  str r0, [r4, #${4 * (i + 1)}]`);
-    });
-    emit(`  mov r0, r4`);
-    emit(`  pop {r4, ip}`);
-  }
-
   equals(other: AST) {
     return other instanceof ArrayNode &&
       this.args.length === other.args.length &&
@@ -758,18 +625,6 @@ class ArrayLookup implements AST {
   constructor(public array: AST, public index: AST) {}
 
   visit<T>(v: Visitor<T>) { return v.visitArrayLookup(this); }
-
-  emit(env: Environment) {
-    this.array.emit(env);
-    emit(`  push {r0, ip}`);
-    this.index.emit(env);
-    emit(`  pop {r1, ip}`);
-    // r0 => index, r1 => array, r2 => array length
-    emit(`  ldr r2, [r1], #4`);
-    emit(`  cmp r0, r2`);
-    emit(`  movhs r0, #0`);
-    emit(`  ldrlo r0, [r1, +r0, lsl #2]`);
-  }
 
   equals(other: AST) {
     return other instanceof ArrayLookup && 
@@ -783,15 +638,6 @@ class Exit implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitExit(this); }
 
-  emit(env) {
-    let syscallNumber = 1;
-    emit(`  mov r0, #0`);
-    emit(`  bl fflush`);
-    this.term.emit(env);
-    emit(`  mov r7, #${syscallNumber}`);
-    emit(`  swi #0`);
-  }
-
   equals(other: AST) {
     return other instanceof Exit && 
       this.term.equals(other.term);
@@ -802,12 +648,6 @@ class Block implements AST {
   constructor(public statements: Array<AST>) {}
 
   visit<T>(v: Visitor<T>) { return v.visitBlock(this); }
-
-  emit(env: Environment) {
-    this.statements.forEach((statement) =>
-      statement.emit(env)
-    );
-  }
 
   equals(other: AST) {
     return other instanceof Block &&
@@ -824,19 +664,6 @@ class If implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitIf(this); }
 
-  emit(env: Environment) {
-    let ifFalseLabel = new Label();
-    let endIfLabel = new Label();
-    this.conditional.emit(env);
-    emit(`  cmp r0, #0`);
-    emit(`  beq ${ifFalseLabel}`);
-    this.consequence.emit(env);
-    emit(`  b ${endIfLabel}`);
-    emit(`${ifFalseLabel}:`);
-    this.alternative.emit(env);
-    emit(`${endIfLabel}:`);
-  }
-
   equals(other: AST) {
     return other instanceof If &&
       this.conditional.equals(other.conditional) &&
@@ -852,45 +679,6 @@ class FunctionDefinition implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitFunctionDefinition(this); }
 
-  emit(_: Environment) {
-    if (this.signature.parameters.size > 4) 
-      throw Error("More than 4 params is not supported");
-
-    emit(``);
-    emit(`.global ${this.name}`);
-    emit(`${this.name}:`);
-
-    this.emitPrologue();
-    let env = this.setUpEnvironment();
-    this.body.emit(env);
-    this.emitEpilogue();
-  }
-
-  emitPrologue() {
-    emit(`  push {fp, lr}`);
-    emit(`  mov fp, sp`);
-    emit(`  push {r0, r1, r2, r3}`);
-    // Alternatively:
-    // emit(`  push {r0, r1, r2, r3, fp, lr}`);
-    // emit(`  add fp, sp, #16`);
-  }
-
-  setUpEnvironment() {
-    let env = new Environment();
-    let parameters = Array.from(this.signature.parameters.keys());
-    parameters.forEach((parameter, i) => {
-      env.locals.set(parameter, 4 * i - 16);
-    });
-    env.nextLocalOffset = -20;
-    return env;
-  }
-
-  emitEpilogue() {
-    emit(`  mov sp, fp`);
-    emit(`  mov r0, #0`);
-    emit(`  pop {fp, pc}`);
-  }
-
   equals(other: AST) {
     return other instanceof FunctionDefinition &&
       this.name === other.name &&
@@ -904,16 +692,6 @@ class Id implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitId(this); }
 
-  emit(env: Environment) {
-    let offset = env.locals.get(this.value);
-    if (offset) {
-      emit(`  ldr r0, [fp, #${offset}]`);
-    } else {
-      console.log(env);
-      throw Error(`Undefined variable: ${this.value}`);
-    }
-  }
-
   equals(other: AST) {
     return other instanceof Id && 
       this.value === other.value;
@@ -925,12 +703,6 @@ class Return implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitReturn(this); }
 
-  emit(env) {
-    this.term.emit(env);
-    emit(`  mov sp, fp`);
-    emit(`  pop {fp, pc}`);
-  }
-
   equals(other: AST) {
     return other instanceof Return && 
       this.term.equals(other.term);
@@ -941,19 +713,6 @@ class While implements AST {
   constructor(public conditional: AST, public body: AST) {}
 
   visit<T>(v: Visitor<T>) { return v.visitWhile(this); }
-
-  emit(env: Environment) {
-    let loopStart = new Label();
-    let loopEnd = new Label();
-
-    emit(`${loopStart}:`);
-    this.conditional.emit(env);
-    emit(`  cmp r0, #0`);
-    emit(`  beq ${loopEnd}`);
-    this.body.emit(env);
-    emit(`  b ${loopStart}`);
-    emit(`${loopEnd}:`);
-  }
 
   equals(other: AST) {
     return other instanceof While &&
@@ -967,16 +726,6 @@ class Assign implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitAssign(this); }
 
-  emit(env: Environment) {
-    this.value.emit(env);
-    let offset = env.locals.get(this.name);
-    if (offset) {
-      emit(`  str r0, [fp, #${offset}]`);
-    } else {
-      throw Error(`Undefined variable: ${this.name}`);
-    }
-  }
-
   equals(other: AST) {
     return other instanceof Assign &&
       this.name === other.name &&
@@ -988,13 +737,6 @@ class Var implements AST {
   constructor(public name: string, public value: AST) {}
 
   visit<T>(v: Visitor<T>) { return v.visitVar(this); }
-
-  emit(env: Environment) {
-    this.value.emit(env);
-    emit(`  push {r0, ip}`);
-    env.locals.set(this.name, env.nextLocalOffset - 4);
-    env.nextLocalOffset -= 8;
-  }
 
   equals(other: AST) {
     return other instanceof Var &&
@@ -1202,6 +944,246 @@ class TypeChecker implements Visitor<Type> {
     return new VoidType();
   }
 }
+
+class CodeGenerator implements Visitor<void> {
+  constructor(public locals: Map<string, number> = new Map(),
+              public nextLocalOffset: number = 0) {}
+
+  visitMain(node: Main) {
+    emit(`.global main`);
+    emit(`main:`);
+    emit(`  push {fp, lr}`);
+    node.statements.forEach((statement) =>
+      statement.visit(this)
+    );
+    emit(`  mov r0, #0`);
+    emit(`  pop {fp, pc}`);
+  }
+
+  visitAssert(node: Assert) {
+    node.condition.visit(this);
+    emit(`  cmp r0, #1`);
+    emit(`  moveq r0, #'.'`);
+    emit(`  movne r0, #'F'`);
+    emit(`  bl putchar`);
+  }
+
+  visitInteger(node: Integer) {
+    emit(`  ldr r0, =${node.value}`);
+  }
+
+  visitBool(node: Bool) {
+    new Integer(Number(node.value)).visit(this)
+  }
+
+  visitNot(node: Not) {
+    node.term.visit(this);
+    emit(`  cmp r0, #0`);
+    emit(`  moveq r0, #1`);
+    emit(`  movne r0, #0`);
+  }
+
+  visitEqual(node: Equal) {
+    node.left.visit(this);
+    emit(`  push {r0, ip}`);
+    node.right.visit(this);
+    emit(`  pop {r1, ip}`);
+    emit(`  cmp r0, r1`);
+    emit(`  moveq r0, #1`);
+    emit(`  movne r0, #0`);
+  }
+
+  visitNotEqual(node: NotEqual) {
+    node.left.visit(this);
+    emit(`  push {r0, ip}`);
+    node.right.visit(this);
+    emit(`  pop {r1, ip}`);
+    emit(`  cmp r0, r1`);
+    emit(`  movne r0, #1`);
+    emit(`  moveq r0, #0`);
+  }
+
+  visitAdd(node: Add) {
+    node.left.visit(this);
+    emit(`  push {r0, ip}`);
+    node.right.visit(this);
+    emit(`  pop {r1, ip}`);
+    emit(`  add r0, r1, r0`);
+  }
+
+  visitSubtract(node: Subtract) {
+    node.left.visit(this);
+    emit(`  push {r0, ip}`);
+    node.right.visit(this);
+    emit(`  pop {r1, ip}`);
+    emit(`  sub r0, r1, r0`);
+  }
+
+  visitMultiply(node: Multiply) {
+    node.left.visit(this);
+    emit(`  push {r0, ip}`);
+    node.right.visit(this);
+    emit(`  pop {r1, ip}`);
+    emit(`  mul r0, r1, r0`);
+  }
+
+  visitDivide(node: Divide) {
+    node.left.visit(this);
+    emit(`  push {r0, ip}`);
+    node.right.visit(this);
+    emit(`  pop {r1, ip}`);
+    emit(`  udiv r0, r1, r0`);
+  }
+
+  visitCall(node: Call) {
+    let count = node.args.length;
+    if (count === 0) {
+      emit(`  bl ${node.callee}`);
+    } else if (count === 1) {
+      node.args[0].visit(this);
+      emit(`  bl ${node.callee}`);
+    } else if (count >= 2 && count <= 4) {
+      emit(`  sub sp, sp, #16`);
+      node.args.forEach((arg, i) => {
+        arg.visit(this);
+        emit(`  str r0, [sp, #${4 * i}]`);
+      });
+      emit(`  pop {r0, r1, r2, r3}`);
+      emit(`  bl ${node.callee}`);
+    } else {
+      throw Error("More than 4 arguments are not supported");
+    }
+  }
+
+  visitArrayNode(node: ArrayNode) {
+    emit(`  push {r4, ip}`);
+    emit(`  ldr r0, =${4 * (node.args.length + 1)}`);
+    emit(`  bl malloc`);
+    emit(`  mov r4, r0`);
+    emit(`  ldr r0, =${node.args.length}`);
+    emit(`  str r0, [r4]`);
+    node.args.forEach((arg, i) => {
+      arg.visit(this);
+      emit(`  str r0, [r4, #${4 * (i + 1)}]`);
+    });
+    emit(`  mov r0, r4`);
+    emit(`  pop {r4, ip}`);
+  }
+
+  visitArrayLookup(node: ArrayLookup) {
+    node.array.visit(this);
+    emit(`  push {r0, ip}`);
+    node.index.visit(this);
+    emit(`  pop {r1, ip}`);
+    // r0 => index, r1 => array, r2 => array length
+    emit(`  ldr r2, [r1], #4`);
+    emit(`  cmp r0, r2`);
+    emit(`  movhs r0, #0`);
+    emit(`  ldrlo r0, [r1, +r0, lsl #2]`);
+  }
+
+  visitExit(node: Exit) {
+    let syscallNumber = 1;
+    emit(`  mov r0, #0`);
+    emit(`  bl fflush`);
+    node.term.visit(this);
+    emit(`  mov r7, #${syscallNumber}`);
+    emit(`  swi #0`);
+  }
+
+  visitBlock(node: Block) {
+    node.statements.forEach((statement) =>
+      statement.visit(this)
+    );
+  }
+
+  visitIf(node: If) {
+    let ifFalseLabel = new Label();
+    let endIfLabel = new Label();
+    node.conditional.visit(this);
+    emit(`  cmp r0, #0`);
+    emit(`  beq ${ifFalseLabel}`);
+    node.consequence.visit(this);
+    emit(`  b ${endIfLabel}`);
+    emit(`${ifFalseLabel}:`);
+    node.alternative.visit(this);
+    emit(`${endIfLabel}:`);
+  }
+
+  visitFunctionDefinition(node: FunctionDefinition) {
+    if (node.signature.parameters.size > 4) 
+      throw Error("More than 4 params is not supported");
+
+    emit(``);
+    emit(`.global ${node.name}`);
+    emit(`${node.name}:`);
+
+    // Prologue
+    emit(`  push {fp, lr}`);
+    emit(`  mov fp, sp`);
+    emit(`  push {r0, r1, r2, r3}`);
+
+    let locals = new Map();
+    let parameters = Array.from(node.signature.parameters.keys());
+    parameters.forEach((parameter, i) => {
+      locals.set(parameter, 4 * i - 16);
+    });
+    let visitor = new CodeGenerator(locals, -20);
+    node.body.visit(visitor);
+
+    // Epilogue
+    emit(`  mov sp, fp`);
+    emit(`  mov r0, #0`);
+    emit(`  pop {fp, pc}`);
+  }
+
+  visitId(node: Id) {
+    let offset = this.locals.get(node.value);
+    if (offset) {
+      emit(`  ldr r0, [fp, #${offset}]`);
+    } else {
+      console.log(this);
+      throw Error(`Undefined variable: ${node.value}`);
+    }
+  }
+
+  visitReturn(node: Return) {
+    node.term.visit(this);
+    emit(`  mov sp, fp`);
+    emit(`  pop {fp, pc}`);
+  }
+
+  visitWhile(node: While) {
+    let loopStart = new Label();
+    let loopEnd = new Label();
+
+    emit(`${loopStart}:`);
+    node.conditional.visit(this);
+    emit(`  cmp r0, #0`);
+    emit(`  beq ${loopEnd}`);
+    node.body.visit(this);
+    emit(`  b ${loopStart}`);
+    emit(`${loopEnd}:`);
+  }
+
+  visitAssign(node: Assign) {
+    node.value.visit(this);
+    let offset = this.locals.get(node.name);
+    if (offset) {
+      emit(`  str r0, [fp, #${offset}]`);
+    } else {
+      throw Error(`Undefined variable: ${node.name}`);
+    }
+  }
+
+  visitVar(node: Var) {
+    node.value.visit(this);
+    emit(`  push {r0, ip}`);
+    this.locals.set(node.name, this.nextLocalOffset - 4);
+    this.nextLocalOffset -= 8;
+  }
+}
+
 
 test("Expression parser", () => {
   console.log();
@@ -1414,5 +1396,6 @@ test("End-to-end test", () => {
   );
   ast.visit(typeChecker);
 
-  ast.emit(new Environment());
+  let codeGenerator = new CodeGenerator();
+  ast.visit(codeGenerator);
 });
