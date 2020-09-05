@@ -17,7 +17,7 @@ let whitespace = regexp(/[ \n\r\t]+/y);
 let comments = regexp(/[/][/].*/y).or(regexp(/[/][*].*[*][/]/sy))
 let ignored = zeroOrMore(whitespace.or(comments));
 
-let token = (pattern) =>
+let token = (pattern: RegExp) =>
   Parser.regexp(pattern).bind((value) =>
     ignored.and(constant(value)));
 
@@ -110,7 +110,7 @@ let unary: Parser<AST> =
   maybe(NOT).bind((not) =>
     atom.map((term) => not ? new Not(term) : term));
 
-let infix = (operatorParser, termParser) =>
+let infix = (operatorParser: Parser<new (left: AST, right: AST) => AST>, termParser: Parser<AST>) =>
   termParser.bind((term) =>
     zeroOrMore(operatorParser.bind((operator) =>
       termParser.bind((term) => 
@@ -188,7 +188,7 @@ let assignmentStatement: Parser<AST> =
       SEMICOLON.and(constant(new Assign(name, value)))));
 
 // blockStatement <- LEFT_BRACE statement* RIGHT_BRACE
-let blockStatement: Parser<AST> =
+let blockStatement: Parser<Block> =
   LEFT_BRACE.and(zeroOrMore(statement)).bind((statements) =>
     RIGHT_BRACE.and(constant(new Block(statements))));
 

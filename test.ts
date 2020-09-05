@@ -18,9 +18,9 @@ let test = (name: string, callback: () => void) => callback();
 test("Source matching is idempotent", () => {
   let s = new Source('  let', 2);
   let result1 = s.match(/let/y);
-  console.assert(result1.value == 'let' && result1.source.index == 5);
+  console.assert(result1 !== null && result1.value === 'let' && result1.source.index === 5);
   let result2 = s.match(/let/y);
-  console.assert(result2.value == 'let' && result2.source.index == 5);
+  console.assert(result2 !== null && result2.value === 'let' && result2.source.index === 5);
 });
 
 let {regexp, constant, maybe, zeroOrMore, error} = Parser;
@@ -42,7 +42,7 @@ test("Parsing with bindings", () => {
 test("Expression parser", () => {
   console.log();
   let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
-  let parse = (string) => expression.parseStringToCompletion(string);
+  let parse = (s: string) => expression.parseStringToCompletion(s);
 
   console.assert(parse('x + y + z').equals(new Add(new Add(x, y), z)));
   console.assert(parse('x + y * z').equals(new Add(x, new Multiply(y, z))));
@@ -59,7 +59,7 @@ test("Expression parser", () => {
 test("Statement parser", () => {
   console.log();
   let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
-  let parse = (string) => statement.parseStringToCompletion(string);
+  let parse = (s: string) => statement.parseStringToCompletion(s);
 
   console.assert(parse('return x;').equals(new Return(x)));
   console.assert(parse('returnx;').equals(new Id('returnx')));

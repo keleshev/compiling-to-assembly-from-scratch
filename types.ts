@@ -1,11 +1,11 @@
 interface Type {
-  equals(Type): boolean;
+  equals(other: Type): boolean;
   toString(): string;
 }
 
 class BoolType implements Type {
 
-  equals(other: Type) {
+  equals(other: Type): boolean {
     return other instanceof BoolType;
   }
 
@@ -16,7 +16,7 @@ class BoolType implements Type {
 
 class IntegerType implements Type {
 
-  equals(other: Type) {
+  equals(other: Type): boolean {
     return other instanceof IntegerType;
   }
 
@@ -27,7 +27,7 @@ class IntegerType implements Type {
 
 class VoidType implements Type {
 
-  equals(other: Type) {
+  equals(other: Type): boolean {
     return other instanceof VoidType;
   }
 
@@ -39,7 +39,7 @@ class VoidType implements Type {
 class ArrayType implements Type {
   constructor(public element: Type) {}
 
-  equals(other: Type) {
+  equals(other: Type): boolean {
     return other instanceof ArrayType &&
       this.element.equals(other.element);
   }
@@ -53,7 +53,7 @@ class FunctionType implements Type {
   constructor(public parameters: Map<string, Type>,
               public returnType: Type) {}
 
-  equals(other: Type) {
+  equals(other: Type): boolean {
     if (other instanceof FunctionType) {
       // Parameter names are irrelevant, compare only types
       let thisParameterTypes = Array.from(this.parameters.values());

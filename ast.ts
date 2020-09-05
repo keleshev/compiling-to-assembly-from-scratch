@@ -2,7 +2,7 @@ import { FunctionType } from "./types"
 
 
 interface AST {
-  equals(AST): boolean;
+  equals(node: AST): boolean;
   visit<T>(v: Visitor<T>): T;
 }
 
@@ -11,7 +11,7 @@ class Main implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitMain(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Main &&
       this.statements.length === other.statements.length &&
       this.statements.every((statement, i) =>
@@ -24,7 +24,7 @@ class Assert implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitAssert(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Assert && 
       this.condition.equals(other.condition);
   }
@@ -35,7 +35,7 @@ class Integer implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitInteger(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Integer &&
       this.value === other.value;
   }
@@ -46,7 +46,7 @@ class Bool implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitBool(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Bool &&
       this.value === other.value;
   }
@@ -57,7 +57,7 @@ class Not implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitNot(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Not && this.term.equals(other.term);
   }
 }
@@ -67,7 +67,7 @@ class Equal implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitEqual(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Equal &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -79,7 +79,7 @@ class NotEqual implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitNotEqual(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof NotEqual &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -91,7 +91,7 @@ class Add implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitAdd(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Add &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -103,7 +103,7 @@ class Subtract implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitSubtract(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Subtract &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -115,7 +115,7 @@ class Multiply implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitMultiply(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Multiply &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -127,7 +127,7 @@ class Divide implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitDivide(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Divide &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -139,7 +139,7 @@ class Call implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitCall(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Call &&
       this.callee === other.callee &&
       this.args.length === other.args.length &&
@@ -152,7 +152,7 @@ class ArrayNode implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitArrayNode(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof ArrayNode &&
       this.args.length === other.args.length &&
       this.args.every((arg, i) => arg.equals(other.args[i]));
@@ -164,7 +164,7 @@ class ArrayLookup implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitArrayLookup(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof ArrayLookup && 
       this.array.equals(other.array) &&
       this.index.equals(other.index);
@@ -176,7 +176,7 @@ class Exit implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitExit(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Exit && 
       this.term.equals(other.term);
   }
@@ -187,7 +187,7 @@ class Block implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitBlock(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Block &&
       this.statements.length === other.statements.length &&
       this.statements.every((statement, i) =>
@@ -202,7 +202,7 @@ class If implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitIf(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof If &&
       this.conditional.equals(other.conditional) &&
       this.consequence.equals(other.consequence) &&
@@ -217,7 +217,7 @@ class FunctionDefinition implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitFunctionDefinition(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof FunctionDefinition &&
       this.name === other.name &&
       this.signature.equals(other.signature) &&
@@ -230,7 +230,7 @@ class Id implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitId(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Id && 
       this.value === other.value;
   }
@@ -241,7 +241,7 @@ class Return implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitReturn(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Return && 
       this.term.equals(other.term);
   }
@@ -252,7 +252,7 @@ class While implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitWhile(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof While &&
       this.conditional.equals(other.conditional) &&
       this.body.equals(other.body);
@@ -264,7 +264,7 @@ class Assign implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitAssign(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Assign &&
       this.name === other.name &&
       this.value.equals(other.value);
@@ -276,7 +276,7 @@ class Var implements AST {
 
   visit<T>(v: Visitor<T>) { return v.visitVar(this); }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Var &&
       this.name === other.name &&
       this.value.equals(other.value);

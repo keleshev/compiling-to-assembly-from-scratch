@@ -22,7 +22,7 @@ class Source {
 }
 
 class Parser<T> {
-  constructor(public parse: (Source) => (ParseResult<T> | null)) {}
+  constructor(public parse: (s: Source) => (ParseResult<T> | null)) {}
 
   /* Primitive combinators */
 
@@ -60,7 +60,7 @@ class Parser<T> {
     });
   }
 
-  bind<U>(callback: (T) => Parser<U>): Parser<U> {
+  bind<U>(callback: (value: T) => Parser<U>): Parser<U> {
     return new Parser((source) => {
       let result = this.parse(source);
       if (result)
@@ -80,7 +80,7 @@ class Parser<T> {
     return this.bind((value) => Parser.constant(callback(value)));
   }
 
-  static maybe<U>(parser: Parser<U>): Parser<U | null> {
+  static maybe<U>(parser: Parser<U | null>): Parser<U | null> {
     return parser.or(Parser.constant(null));
   }
 

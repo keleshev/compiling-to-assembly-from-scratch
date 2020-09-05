@@ -93,7 +93,7 @@ class TypeChecker implements Visitor<Type> {
     return expected.returnType;
   }
 
-  visitArrayNode(node: ArrayNode) {
+  visitArrayNode(node: ArrayNode): Type {
     if (node.args.length == 0) {
       throw Error("Type error: can't infer type of an empty array");
     }
@@ -106,7 +106,7 @@ class TypeChecker implements Visitor<Type> {
     return new ArrayType(elementType);
   }
 
-  visitArrayLookup(node: ArrayLookup) {
+  visitArrayLookup(node: ArrayLookup): Type {
     assertType(new IntegerType(), node.index.visit(this));
     let type = node.array.visit(this);
     if (type instanceof ArrayType) {
