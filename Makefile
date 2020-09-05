@@ -4,6 +4,7 @@ RUN = qemu-arm-static
 .PHONY: phony
 
 default: test
+	$(MAKE) clean
 
 test: test.exe phony
 	$(RUN) ./$<
@@ -11,11 +12,11 @@ test: test.exe phony
 %.exe: %.s
 	$(CC) $< -o $@
 
-test.s: compiler.js
-	node compiler.js > test.s
+test.s: test.js
+	node test.js > test.s
 
 %.js: %.ts
-	tsc --target ESNEXT $<
+	tsc --module commonjs --target esnext $<
 
 clean: phony
-	rm *.exe *.s *.js
+	rm -f *.exe *.s *.js .*.swp
