@@ -10,6 +10,7 @@ import {
 
 import { TypeChecker } from "./type-checker"
 import { CodeGenerator } from "./code-generator"
+import { ASTTraversal } from "./ast-traversal"
 import { ParseResult, Source, Parser } from "./parser-combinators"
 import { statement, expression, parser } from "./parser"
 
@@ -241,6 +242,9 @@ test("End-to-end test", () => {
   `;
 
   let ast = parser.parseStringToCompletion(source);
+
+  let astCopy = ast.visit(new ASTTraversal());
+  console.assert(ast.equals(astCopy));
 
   let typeChecker = new TypeChecker(
     new Map(),
