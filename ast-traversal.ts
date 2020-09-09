@@ -1,6 +1,6 @@
 import {
-  AST, Main, Assert, Integer, Bool, Not, Equal, NotEqual, Add, Subtract,
-  Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  AST, Main, Assert, Length, Integer, Bool, Not, Equal, NotEqual, Add,
+  Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -14,6 +14,11 @@ class ASTTraversal implements Visitor<AST> {
   visitAssert(node: Assert): AST {
     let condition = node.condition.visit(this);
     return new Assert(condition);
+  }
+
+  visitLength(node: Length): AST {
+    let array = node.array.visit(this);
+    return new Length(array);
   }
 
   visitInteger(node: Integer): AST {

@@ -3,8 +3,8 @@ import {
 } from "./types";
 
 import {
-  AST, Main, Assert, Integer, Bool, Not, Equal, NotEqual, Add, Subtract,
-  Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  AST, Main, Assert, Length, Integer, Bool, Not, Equal, NotEqual, Add,
+  Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -28,6 +28,11 @@ class TypeChecker implements Visitor<Type> {
   visitAssert(node: Assert) {
     assertType(new BoolType(), node.condition.visit(this));
     return new VoidType();
+  }
+
+  visitLength(node: Length) {
+    node.array.visit(this);
+    return new IntegerType();
   }
 
   visitInteger(node: Integer) {

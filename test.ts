@@ -11,6 +11,7 @@ import {
 import { TypeChecker } from "./type-checker"
 import { CodeGenerator } from "./code-generator"
 import { ASTTraversal } from "./ast-traversal"
+import { Optimizer } from "./optimizer"
 import { ParseResult, Source, Parser } from "./parser-combinators"
 import { statement, expression, parser } from "./parser"
 
@@ -109,6 +110,42 @@ test("Parser integration test", () => {
   let result = parser.parseStringToCompletion(source);
 
   console.assert(result.equals(expected));
+});
+
+let parse = (s: string) => parser.parseStringToCompletion(s);
+
+test("Optimizer: constant folding and constant propagation", () => {
+  let before = parse(`
+    function f(x) {
+      var y = 1 + 2;
+      var z = y + 3;
+      assert(x == z);
+
+      if (x) { z = 0; } else {}
+      assert(x == z);
+
+      z = g();
+      return z;
+    }
+  `);
+
+  let after = parse(`
+    function f(x) {
+      var y = 3;
+      var z = 6;
+      assert(x == 6);
+
+      if (x) { z = 0; } else {}
+      assert(x == z);
+
+      z = g();
+      return z;
+    }
+  `);
+
+  let result = before.visit(new Optimizer(new Map()));
+
+  console.assert(result.equals(after));
 });
 
 test("End-to-end test", () => {
@@ -234,6 +271,7 @@ test("End-to-end test", () => {
       assert(a[2] == 30);
       assert(a[3] == 0); // Bounds checking
       assert(a[1000000000] == 0); // Bounds checking
+      assert(length(a) == 3);
 
       putchar(10); // Newline
     }

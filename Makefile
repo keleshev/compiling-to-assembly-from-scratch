@@ -3,6 +3,7 @@
 
 CC = arm-linux-gnueabihf-gcc -static
 RUN = qemu-arm-static
+SOURCES = $(shell find . -name '*.ts')
 
 default: test
 
@@ -15,7 +16,7 @@ test: build/test.exe phony
 %.s: %.js Makefile
 	node $< > $@
 
-build/%.js: %.ts Makefile
+build/%.js: %.ts $(SOURCES) Makefile
 	tsc --strict --outdir build --module commonjs --target esnext $<
 
 clean: phony

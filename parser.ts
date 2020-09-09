@@ -3,8 +3,8 @@ import {
 } from "./types";
 
 import {
-  AST, Main, Assert, Integer, Bool, Not, Equal, NotEqual, Add, Subtract,
-  Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  AST, Main, Assert, Length, Integer, Bool, Not, Equal, NotEqual, Add,
+  Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -85,8 +85,8 @@ let call: Parser<AST> =
   ID.bind((callee) =>
     LEFT_PAREN.and(args.bind((args) =>
       RIGHT_PAREN.and(constant(
-        callee === '__assert' 
-          ? new Assert(args[0])
+        callee === "length" 
+          ? new Length(args[0])
 	  : new Call(callee, args))))));
 
 // array <- LEFT_BRACKET args RIGHT_BRACKET

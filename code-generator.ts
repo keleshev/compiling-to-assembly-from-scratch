@@ -1,6 +1,6 @@
 import {
-  AST, Main, Assert, Integer, Bool, Not, Equal, NotEqual, Add, Subtract,
-  Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  AST, Main, Assert, Length, Integer, Bool, Not, Equal, NotEqual, Add,
+  Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -41,6 +41,11 @@ class CodeGenerator implements Visitor<void> {
     emit(`  moveq r0, #'.'`);
     emit(`  movne r0, #'F'`);
     emit(`  bl putchar`);
+  }
+
+  visitLength(node: Length) {
+    node.array.visit(this);
+    emit(`  ldr r0, [r0, #0]`);
   }
 
   visitInteger(node: Integer) {

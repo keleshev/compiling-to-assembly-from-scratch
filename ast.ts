@@ -30,6 +30,17 @@ class Assert implements AST {
   }
 }
 
+class Length implements AST {
+  constructor(public array: AST) {}
+
+  visit<T>(v: Visitor<T>) { return v.visitLength(this); }
+
+  equals(other: AST): boolean {
+    return other instanceof Length && 
+      this.array.equals(other.array);
+  }
+}
+
 class Integer implements AST {
   constructor(public value: number) {}
 
@@ -286,6 +297,7 @@ class Var implements AST {
 interface Visitor<T> {
   visitMain(node: Main): T;
   visitAssert(node: Assert): T;
+  visitLength(node: Length): T;
   visitInteger(node: Integer): T;
   visitBool(node: Bool): T;
   visitNot(node: Not): T;
@@ -313,6 +325,7 @@ export {
   AST,
   Main,
   Assert,
+  Length,
   Integer,
   Bool,
   Not,
