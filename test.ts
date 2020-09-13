@@ -9,7 +9,7 @@ import {
 } from "./ast";
 
 import { TypeChecker } from "./type-checker"
-import { CodeGenerator } from "./code-generator"
+import { CodeGenerator, CodeGeneratorDynamicTyping } from "./code-generator"
 import { ASTTraversal } from "./ast-traversal"
 import { Optimizer } from "./optimizer"
 import { ParseResult, Source, Parser } from "./parser-combinators"
@@ -152,9 +152,11 @@ test("End-to-end test", () => {
   let source = `
     function assert(x: boolean): void {
       if (x) {
-	putchar(46);
+//	putchar(46);
+	putchar(11);
       } else {
-	putchar(70);
+//	putchar(70);
+	putchar(17);
       }
     }
 
@@ -191,12 +193,14 @@ test("End-to-end test", () => {
     }
 
     function main() {
+      var undefined = assert(true);
+ 
       // Test boolean and negation
       assert(true);
       assert(!false);
       assert(!(!true));
 
-      putchar(46);
+      //putchar(46);
 
       // Test Equal
       assert(42 == 42);
@@ -225,7 +229,7 @@ test("End-to-end test", () => {
       //}
 
       // Test If
-      if (1)
+      if (1)  // TODO: 1 is falsy
 	assert(true);
       else
 	assert(false);
@@ -237,6 +241,12 @@ test("End-to-end test", () => {
       }
 
       assert(factorial(5) == 120);
+
+      // var a = 42;
+      // assert(a == 42);
+      // var x = 0;
+      //assert(4 + 2 * (12 - 2) == 24);
+      //assert(4 + 2 * (12 - 2) + 3 * (5 + 1) == 42);
 
       var x = 4 + 2 * (12 - 2);
       var y = 3 * (5 + 1);
@@ -251,7 +261,7 @@ test("End-to-end test", () => {
       // Test while loops
       var i = 0;
       while (i != 3) {
-	i = i + 1;
+        i = i + 1;
       }
       assert(i == 3);
 
@@ -269,14 +279,14 @@ test("End-to-end test", () => {
       assert(a[0] == 10);
       assert(a[1] == 20);
       assert(a[2] == 30);
-      assert(a[3] == 0); // Bounds checking
-      assert(a[1000000000] == 0); // Bounds checking
+      assert(a[3] == undefined); // Bounds checking             TODO: undefined literal
+      assert(a[10000000] == undefined); // Bounds checking
       assert(length(a) == 3);
 
-      putchar(10); // Newline
+      //putchar(10); // Newline
     }
 
-    function wrongReturnType1(): number {}
+//    function wrongReturnType1(): number {}  // TODO
   `;
 
   let ast = parser.parseStringToCompletion(source);
@@ -284,14 +294,14 @@ test("End-to-end test", () => {
   let astCopy = ast.visit(new ASTTraversal());
   console.assert(ast.equals(astCopy));
 
-  let typeChecker = new TypeChecker(
-    new Map(),
-    new Map([
-      ["putchar", new FunctionType(new Map([["char", new IntegerType()]]), new VoidType())],
-    ]),
-  );
-  ast.visit(typeChecker);
+  //let typeChecker = new TypeChecker(
+  //  new Map(),
+  //  new Map([
+  //    ["putchar", new FunctionType(new Map([["char", new IntegerType()]]), new VoidType())],
+  //  ]),
+  //);
+  //ast.visit(typeChecker);
 
-  let codeGenerator = new CodeGenerator();
+  let codeGenerator = new CodeGeneratorDynamicTyping();
   ast.visit(codeGenerator);
 });
