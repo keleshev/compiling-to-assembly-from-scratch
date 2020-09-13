@@ -229,7 +229,7 @@ test("End-to-end test", () => {
       //}
 
       // Test If
-      if (1)  // TODO: 1 is falsy
+      if (1) 
 	assert(true);
       else
 	assert(false);
@@ -284,6 +284,7 @@ test("End-to-end test", () => {
       assert(length(a) == 3);
 
       //putchar(10); // Newline
+      return 0;
     }
 
 //    function wrongReturnType1(): number {}  // TODO

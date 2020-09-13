@@ -87,7 +87,9 @@ let call: Parser<AST> =
       RIGHT_PAREN.and(constant(
         callee === "length" 
           ? new Length(args[0])
-	  : new Call(callee, args))))));
+	  : callee === "assert"
+            ? new Assert(args[0])
+            : new Call(callee, args))))));
 
 // array <- LEFT_BRACKET args RIGHT_BRACKET
 let array: Parser<AST> = 

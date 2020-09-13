@@ -272,8 +272,7 @@ let undefinedBitPattern = 0b010;
 let toSmallInteger = (n: number) => n << 2;
 
 let tagBitMask = 0b11;
-let falsyBitMask = 0b110;
-
+let falsyTag = 0b10;
 let arrayTag = 0b01;
 
 class CodeGeneratorDynamicTyping implements Visitor<void> {
@@ -281,23 +280,17 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
               public nextLocalOffset: number = 0) {}
 
   visitMain(node: Main) {
-    emit(`.global main`);
-    emit(`main:`);
-    emit(`  push {fp, lr}`);
-    emit(`  mov fp, sp`);
-    node.statements.forEach((statement) =>
-      statement.visit(this)
-    );
-    emit(`  mov sp, fp`);
-    emit(`  mov r0, #0`);
-    emit(`  pop {fp, pc}`);
-    // TODO Return from main will not give the right exit code
   }
+
+  emitCompareFalsy() {
+    emit(`  cmp r0, #0`);
+    emit(`  andne r0, r0, #${tagBitMask}`)
+    emit(`  cmpne r0, #${falsyTag}`);
+  } 
 
   visitAssert(node: Assert) {
     node.condition.visit(this);
-    emit(`  bic r0, r0, #${falsyBitMask}`); 
-    emit(`  cmp r0, #0`);
+    this.emitCompareFalsy();
     emit(`  movne r0, #'.'`);
     emit(`  moveq r0, #'F'`);
     emit(`  bl putchar`);
@@ -323,8 +316,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
 
   visitNot(node: Not) {
     node.term.visit(this);
-    emit(`  bic r0, r0, #${falsyBitMask}`);
-    emit(`  cmp r0, #0`);
+    this.emitCompareFalsy();
     emit(`  moveq r0, #${trueBitPattern}`);
     emit(`  movne r0, #${falseBitPattern}`);
   }
@@ -469,8 +461,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
     let ifFalseLabel = new Label();
     let endIfLabel = new Label();
     node.conditional.visit(this);
-    emit(`  bic r0, r0, #${falsyBitMask}`);
-    emit(`  cmp r0, #0`);
+    this.emitCompareFalsy();
     emit(`  beq ${ifFalseLabel}`);
     node.consequence.visit(this);
     emit(`  b ${endIfLabel}`);
@@ -528,8 +519,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
 
     emit(`${loopStart}:`);
     node.conditional.visit(this);
-    emit(`  bic r0, r0, #${falsyBitMask}`);
-    emit(`  cmp r0, #0`);
+    this.emitCompareFalsy();
     emit(`  beq ${loopEnd}`);
     node.body.visit(this);
     emit(`  b ${loopStart}`);
