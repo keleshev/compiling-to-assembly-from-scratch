@@ -5,7 +5,7 @@ import {
 import {
   AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
-  FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
+  Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
 
@@ -142,7 +142,7 @@ class TypeChecker implements Visitor<Type> {
     return new VoidType();
   }
 
-  visitFunctionDefinition(node: FunctionDefinition) {
+  visitFunction(node: Function) {
     if (this.currentFunctionReturnType) {
       throw Error("Nexted functions are not supported");
     }

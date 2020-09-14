@@ -1,7 +1,7 @@
 import {
   AST, Main, Assert, Integer, Boolean, Undefined, Not, Equal, NotEqual, Add,
   Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
-  FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
+  Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
 import { ASTTraversal } from "./ast-traversal";
@@ -38,10 +38,10 @@ class Optimizer extends ASTTraversal {
     return new If(conditional, consequence, alternative);
   }
 
-  visitFunctionDefinition(node: FunctionDefinition): AST {
+  visitFunction(node: Function): AST {
     let visitor = new Optimizer(new Map()); 
     let body = node.body.visit(visitor);
-    return new FunctionDefinition(node.name, node.signature, body);
+    return new Function(node.name, node.signature, body);
   }
 
   visitAssign(node: Assign): AST {

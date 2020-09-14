@@ -1,7 +1,7 @@
 import {
   AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
-  FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
+  Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
 
@@ -55,7 +55,7 @@ class CodeGenerator implements Visitor<void> {
   }
 
   visitBoolean(node: Boolean) {
-    new Integer(Number(node.value)).visit(this)
+    new Integer(node.value ? 1 : 0).visit(this)
   }
 
   visitUndefined(node: Undefined) {
@@ -196,7 +196,7 @@ class CodeGenerator implements Visitor<void> {
     emit(`${endIfLabel}:`);
   }
 
-  visitFunctionDefinition(node: FunctionDefinition) {
+  visitFunction(node: Function) {
     if (node.signature.parameters.size > 4) 
       throw Error("More than 4 params is not supported");
 
@@ -478,7 +478,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
     emit(`${endIfLabel}:`);
   }
 
-  visitFunctionDefinition(node: FunctionDefinition) {
+  visitFunction(node: Function) {
     if (node.signature.parameters.size > 4) 
       throw Error("More than 4 params is not supported");
 

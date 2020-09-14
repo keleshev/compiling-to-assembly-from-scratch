@@ -5,7 +5,7 @@ import {
 import {
   AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block,
-  If, FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
+  If, Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
 import { ParseResult, Source, Parser } from "./parser-combinators"
@@ -224,7 +224,7 @@ let functionStatement: Parser<AST> =
           constant(
             name === '__main'
               ? new Main(block.statements)
-              : new FunctionDefinition(
+              : new Function(
                   name, 
                   new FunctionType(new Map(parameters), returnType),
                   block))))));

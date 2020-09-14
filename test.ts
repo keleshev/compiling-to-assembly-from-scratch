@@ -5,7 +5,7 @@ import {
 import {
   AST, Main, Assert, Integer, Boolean, Not, Equal, NotEqual, Add, Subtract,
   Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
-  FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
+  Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
 import { TypeChecker } from "./type-checker"
@@ -77,7 +77,7 @@ test("Statement parser", () => {
     new If(x, new Block([new Return(y)]), new Block([new Return(z)]))));
 
   //console.assert(parse('function id(x) { return x; }').equals(
-  //  new FunctionDefinition('id', ['x'], new Block([new Return(x)]))));
+  //  new Function('id', ['x'], new Block([new Return(x)]))));
 });
 
 test("Parser integration test", () => {
@@ -93,7 +93,7 @@ test("Parser integration test", () => {
   `;
 
   let expected = new Block([
-    new FunctionDefinition(
+    new Function(
       "factorial", 
       new FunctionType(new Map([["n", new IntegerType()]]), new IntegerType()),
       new Block([

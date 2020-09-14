@@ -231,15 +231,15 @@ class If implements AST {
   }
 }
 
-class FunctionDefinition implements AST {
+class Function implements AST {
   constructor(public name: string,
               public signature: FunctionType,
               public body: AST) {}
 
-  visit<T>(v: Visitor<T>) { return v.visitFunctionDefinition(this); }
+  visit<T>(v: Visitor<T>) { return v.visitFunction(this); }
 
   equals(other: AST): boolean {
-    return other instanceof FunctionDefinition &&
+    return other instanceof Function &&
       this.name === other.name &&
       this.signature.equals(other.signature) &&
       this.body.equals(other.body);
@@ -324,7 +324,7 @@ interface Visitor<T> {
   visitExit(node: Exit): T;
   visitBlock(node: Block): T;
   visitIf(node: If): T;
-  visitFunctionDefinition(node: FunctionDefinition): T;
+  visitFunction(node: Function): T;
   visitId(node: Id): T;
   visitReturn(node: Return): T;
   visitWhile(node: While): T;
@@ -353,7 +353,7 @@ export {
   Exit,
   Block,
   If,
-  FunctionDefinition,
+  Function,
   Id,
   Return,
   While,

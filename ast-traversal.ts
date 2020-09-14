@@ -1,7 +1,7 @@
 import {
   AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, 
-  If, FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
+  If, Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
 
@@ -107,9 +107,9 @@ class ASTTraversal implements Visitor<AST> {
     return new If(conditional, consequence, alternative);
   }
 
-  visitFunctionDefinition(node: FunctionDefinition): AST {
+  visitFunction(node: Function): AST {
     let body = node.body.visit(this);
-    return new FunctionDefinition(node.name, node.signature, body);
+    return new Function(node.name, node.signature, body);
   }
 
   visitId(node: Id): AST {
