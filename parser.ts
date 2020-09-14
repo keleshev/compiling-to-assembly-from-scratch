@@ -3,9 +3,9 @@ import {
 } from "./types";
 
 import {
-  AST, Main, Assert, Length, Integer, Bool, Not, Equal, NotEqual, Add,
-  Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
-  FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
+  AST, Main, Assert, Length, Integer, Bool, Undefined, Not, Equal, NotEqual,
+  Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block,
+  If, FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
 import { ParseResult, Source, Parser } from "./parser-combinators"
@@ -30,6 +30,7 @@ let RETURN = token(/return\b/y);
 let VAR = token(/var\b/y);
 let TRUE = token(/true\b/y).map((_) => new Bool(true));
 let FALSE = token(/false\b/y).map((_) => new Bool(false));
+let UNDEFINED = token(/undefined\b/y).map((_) => new Undefined());
 let VOID = token(/void\b/y).map((_) => new VoidType());
 let BOOLEAN = token(/boolean\b/y).map((_) => new BoolType());
 let NUMBER = token(/number\b/y).map((_) => new IntegerType());
@@ -52,7 +53,7 @@ let INTEGER =
   token(/[0-9]+/y).map((digits) =>
     new Integer(parseInt(digits)));
 
-let BOOL: Parser<AST> = TRUE.or(FALSE)
+let bool: Parser<AST> = TRUE.or(FALSE)
 
 let ID =
   token(/[a-zA-Z_][a-zA-Z0-9_]*/y);
@@ -102,9 +103,10 @@ let arrayLookup: Parser<AST> =
     LEFT_BRACKET.and(expression.bind((index) =>
       RIGHT_BRACKET.and(constant(new ArrayLookup(array, index))))));
 
-// atom <- BOOL / call / arrayLookup / ID / INTEGER / array / LEFT_PAREN expression RIGHT_PAREN
+// atom <- 
+//   bool / UNDEFINED / call / arrayLookup / ID / INTEGER / array / LEFT_PAREN expression RIGHT_PAREN
 let atom: Parser<AST> =
-  BOOL.or(call).or(arrayLookup).or(id).or(INTEGER).or(array).or(LEFT_PAREN.and(expression).bind((e) =>
+  bool.or(UNDEFINED).or(call).or(arrayLookup).or(id).or(INTEGER).or(array).or(LEFT_PAREN.and(expression).bind((e) =>
     RIGHT_PAREN.and(constant(e))));
 
 // unary <- NOT? atom

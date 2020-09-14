@@ -63,6 +63,16 @@ class Bool implements AST {
   }
 }
 
+class Undefined implements AST {
+  constructor() {}
+
+  visit<T>(v: Visitor<T>) { return v.visitUndefined(this); }
+
+  equals(other: AST): boolean {
+    return other instanceof Undefined;
+  }
+}
+
 class Not implements AST {
   constructor(public term: AST) {}
 
@@ -300,6 +310,7 @@ interface Visitor<T> {
   visitLength(node: Length): T;
   visitInteger(node: Integer): T;
   visitBool(node: Bool): T;
+  visitUndefined(node: Undefined): T;
   visitNot(node: Not): T;
   visitEqual(node: Equal): T;
   visitNotEqual(node: NotEqual): T;
@@ -328,6 +339,7 @@ export {
   Length,
   Integer,
   Bool,
+  Undefined,
   Not,
   Equal,
   NotEqual,

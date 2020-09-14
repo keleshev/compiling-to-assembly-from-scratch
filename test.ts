@@ -193,7 +193,6 @@ test("End-to-end test", () => {
     }
 
     function main() {
-      var undefined = assert(true);
  
       // Test boolean and negation
       assert(true);

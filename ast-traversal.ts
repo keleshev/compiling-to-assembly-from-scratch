@@ -1,7 +1,7 @@
 import {
-  AST, Main, Assert, Length, Integer, Bool, Not, Equal, NotEqual, Add,
-  Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
-  FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
+  AST, Main, Assert, Length, Integer, Bool, Undefined, Not, Equal, NotEqual,
+  Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, 
+  If, FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
 
@@ -27,6 +27,10 @@ class ASTTraversal implements Visitor<AST> {
 
   visitBool(node: Bool): AST {
     return new Bool(node.value);
+  }
+
+  visitUndefined(node: Undefined): AST {
+    return new Undefined();
   }
 
   visitNot(node: Not): AST {

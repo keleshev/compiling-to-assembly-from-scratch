@@ -3,8 +3,8 @@ import {
 } from "./types";
 
 import {
-  AST, Main, Assert, Length, Integer, Bool, Not, Equal, NotEqual, Add,
-  Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  AST, Main, Assert, Length, Integer, Bool, Undefined, Not, Equal, NotEqual,
+  Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -41,6 +41,10 @@ class TypeChecker implements Visitor<Type> {
 
   visitBool(node: Bool) {
     return new BoolType();
+  }
+
+  visitUndefined(node: Undefined) {
+    return new VoidType();
   }
 
   visitNot(node: Not) {
