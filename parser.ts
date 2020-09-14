@@ -1,9 +1,9 @@
 import { 
-  Type, BooleanType, IntegerType, VoidType, ArrayType, FunctionType,
+  Type, BooleanType, NumberType, VoidType, ArrayType, FunctionType,
 } from "./types";
 
 import {
-  AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
+  AST, Main, Assert, Length, Number, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block,
   If, Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -33,7 +33,7 @@ let FALSE = token(/false\b/y).map((_) => new Boolean(false));
 let UNDEFINED = token(/undefined\b/y).map((_) => new Undefined());
 let VOID = token(/void\b/y).map((_) => new VoidType());
 let BOOLEAN = token(/boolean\b/y).map((_) => new BooleanType());
-let NUMBER = token(/number\b/y).map((_) => new IntegerType());
+let NUMBER = token(/number\b/y).map((_) => new NumberType());
 let ARRAY = token(/Array\b/y)
 
 let COMMA = token(/[,]/y);
@@ -51,7 +51,7 @@ let GREATER_THAN = token(/>/y);
 
 let INTEGER =
   token(/[0-9]+/y).map((digits) =>
-    new Integer(parseInt(digits)));
+    new Number(parseInt(digits)));
 
 let bool: Parser<AST> = TRUE.or(FALSE)
 
@@ -200,7 +200,7 @@ let blockStatement: Parser<Block> =
 let optionalTypeAnnotation: Parser<Type> =
   // If type annotation is missing, default to integer type 
   maybe(COLON.and(type)).map((type) =>
-    type ? type : new IntegerType());  
+    type ? type : new NumberType());  
 
 // parameter <- ID optionalTypeAnnotation 
 let parameter: Parser<[string, Type]> =

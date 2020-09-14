@@ -1,9 +1,9 @@
 import { 
-  Type, BooleanType, IntegerType, VoidType, ArrayType, FunctionType,
+  Type, BooleanType, NumberType, VoidType, ArrayType, FunctionType,
 } from "./types";
 
 import {
-  AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
+  AST, Main, Assert, Length, Number, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -32,11 +32,11 @@ class TypeChecker implements Visitor<Type> {
 
   visitLength(node: Length) {
     node.array.visit(this);
-    return new IntegerType();
+    return new NumberType();
   }
 
-  visitInteger(node: Integer) {
-    return new IntegerType();
+  visitNumber(node: Number) {
+    return new NumberType();
   }
 
   visitBoolean(node: Boolean) {
@@ -67,27 +67,27 @@ class TypeChecker implements Visitor<Type> {
   }
 
   visitAdd(node: Add) {
-    assertType(new IntegerType(), node.left.visit(this));
-    assertType(new IntegerType(), node.right.visit(this));
-    return new IntegerType();
+    assertType(new NumberType(), node.left.visit(this));
+    assertType(new NumberType(), node.right.visit(this));
+    return new NumberType();
   }
 
   visitSubtract(node: Subtract) {
-    assertType(new IntegerType(), node.left.visit(this));
-    assertType(new IntegerType(), node.right.visit(this));
-    return new IntegerType();
+    assertType(new NumberType(), node.left.visit(this));
+    assertType(new NumberType(), node.right.visit(this));
+    return new NumberType();
   }
 
   visitMultiply(node: Multiply) {
-    assertType(new IntegerType(), node.left.visit(this));
-    assertType(new IntegerType(), node.right.visit(this));
-    return new IntegerType();
+    assertType(new NumberType(), node.left.visit(this));
+    assertType(new NumberType(), node.right.visit(this));
+    return new NumberType();
   }
 
   visitDivide(node: Divide) {
-    assertType(new IntegerType(), node.left.visit(this));
-    assertType(new IntegerType(), node.right.visit(this));
-    return new IntegerType();
+    assertType(new NumberType(), node.left.visit(this));
+    assertType(new NumberType(), node.right.visit(this));
+    return new NumberType();
   }
 
   visitCall(node: Call) {
@@ -116,7 +116,7 @@ class TypeChecker implements Visitor<Type> {
   }
 
   visitArrayLookup(node: ArrayLookup): Type {
-    assertType(new IntegerType(), node.index.visit(this));
+    assertType(new NumberType(), node.index.visit(this));
     let type = node.array.visit(this);
     if (type instanceof ArrayType) {
       return type.element;
@@ -126,7 +126,7 @@ class TypeChecker implements Visitor<Type> {
   }
 
   visitExit(node: Exit) {
-    assertType(new IntegerType(), node.term.visit(this));
+    assertType(new NumberType(), node.term.visit(this));
     return new VoidType();
   }
 

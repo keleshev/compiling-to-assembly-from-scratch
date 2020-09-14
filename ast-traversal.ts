@@ -1,5 +1,5 @@
 import {
-  AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
+  AST, Main, Assert, Length, Number, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, 
   If, Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -21,8 +21,8 @@ class ASTTraversal implements Visitor<AST> {
     return new Length(array);
   }
 
-  visitInteger(node: Integer): AST {
-    return new Integer(node.value);
+  visitNumber(node: Number): AST {
+    return new Number(node.value);
   }
 
   visitBoolean(node: Boolean): AST {

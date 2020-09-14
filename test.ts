@@ -1,9 +1,9 @@
 import { 
-  Type, BooleanType, IntegerType, VoidType, ArrayType, FunctionType,
+  Type, BooleanType, NumberType, VoidType, ArrayType, FunctionType,
 } from "./types";
 
 import {
-  AST, Main, Assert, Integer, Boolean, Not, Equal, NotEqual, Add, Subtract,
+  AST, Main, Assert, Number, Boolean, Not, Equal, NotEqual, Add, Subtract,
   Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -95,12 +95,12 @@ test("Parser integration test", () => {
   let expected = new Block([
     new Function(
       "factorial", 
-      new FunctionType(new Map([["n", new IntegerType()]]), new IntegerType()),
+      new FunctionType(new Map([["n", new NumberType()]]), new NumberType()),
       new Block([
-        new Var("result", new Integer(1)),
-        new While(new NotEqual(new Id("n"), new Integer(1)), new Block([
+        new Var("result", new Number(1)),
+        new While(new NotEqual(new Id("n"), new Number(1)), new Block([
           new Assign("result", new Multiply(new Id("result"), new Id("n"))),
-          new Assign("n", new Subtract(new Id("n"), new Integer(1))),
+          new Assign("n", new Subtract(new Id("n"), new Number(1))),
         ])),
         new Return(new Id("result")),
       ]),
@@ -297,7 +297,7 @@ test("End-to-end test", () => {
   //let typeChecker = new TypeChecker(
   //  new Map(),
   //  new Map([
-  //    ["putchar", new FunctionType(new Map([["char", new IntegerType()]]), new VoidType())],
+  //    ["putchar", new FunctionType(new Map([["char", new NumberType()]]), new VoidType())],
   //  ]),
   //);
   //ast.visit(typeChecker);

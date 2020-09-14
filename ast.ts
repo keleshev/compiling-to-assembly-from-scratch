@@ -41,13 +41,13 @@ class Length implements AST {
   }
 }
 
-class Integer implements AST {
+class Number implements AST {
   constructor(public value: number) {}
 
-  visit<T>(v: Visitor<T>) { return v.visitInteger(this); }
+  visit<T>(v: Visitor<T>) { return v.visitNumber(this); }
 
   equals(other: AST): boolean {
-    return other instanceof Integer &&
+    return other instanceof Number &&
       this.value === other.value;
   }
 }
@@ -308,7 +308,7 @@ interface Visitor<T> {
   visitMain(node: Main): T;
   visitAssert(node: Assert): T;
   visitLength(node: Length): T;
-  visitInteger(node: Integer): T;
+  visitNumber(node: Number): T;
   visitBoolean(node: Boolean): T;
   visitUndefined(node: Undefined): T;
   visitNot(node: Not): T;
@@ -337,7 +337,7 @@ export {
   Main,
   Assert,
   Length,
-  Integer,
+  Number,
   Boolean,
   Undefined,
   Not,

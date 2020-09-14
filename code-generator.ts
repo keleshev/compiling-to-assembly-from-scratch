@@ -1,5 +1,5 @@
 import {
-  AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
+  AST, Main, Assert, Length, Number, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -50,16 +50,16 @@ class CodeGenerator implements Visitor<void> {
     emit(`  ldr r0, [r0, #0]`);
   }
 
-  visitInteger(node: Integer) {
+  visitNumber(node: Number) {
     emit(`  ldr r0, =${node.value}`);
   }
 
   visitBoolean(node: Boolean) {
-    new Integer(node.value ? 1 : 0).visit(this)
+    new Number(node.value ? 1 : 0).visit(this)
   }
 
   visitUndefined(node: Undefined) {
-    new Integer(0).visit(this)
+    new Number(0).visit(this)
   }
 
   visitNot(node: Not) {
@@ -306,7 +306,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
     emit(`  ldr r0, [r0, #-1]`);
   }
 
-  visitInteger(node: Integer) {
+  visitNumber(node: Number) {
     emit(`  ldr r0, =${toSmallInteger(node.value)}`);
   }
 

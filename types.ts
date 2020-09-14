@@ -14,10 +14,10 @@ class BooleanType implements Type {
   }
 }
 
-class IntegerType implements Type {
+class NumberType implements Type {
 
   equals(other: Type): boolean {
-    return other instanceof IntegerType;
+    return other instanceof NumberType;
   }
 
   toString() {
@@ -75,7 +75,7 @@ class FunctionType implements Type {
 export {
   Type,
   BooleanType,
-  IntegerType,
+  NumberType,
   VoidType,
   ArrayType,
   FunctionType,

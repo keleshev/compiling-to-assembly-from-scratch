@@ -1,5 +1,5 @@
 import {
-  AST, Main, Assert, Integer, Boolean, Undefined, Not, Equal, NotEqual, Add,
+  AST, Main, Assert, Number, Boolean, Undefined, Not, Equal, NotEqual, Add,
   Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -15,8 +15,8 @@ class Optimizer extends ASTTraversal {
   visitAdd(node: Add): AST {
     let left = node.left.visit(this);
     let right = node.right.visit(this);
-    if (left instanceof Integer && right instanceof Integer) {
-      return new Integer(left.value + right.value);
+    if (left instanceof Number && right instanceof Number) {
+      return new Number(left.value + right.value);
     }
     return new Add(left, right);
   }
@@ -46,7 +46,7 @@ class Optimizer extends ASTTraversal {
 
   visitAssign(node: Assign): AST {
     let value = node.value.visit(this);
-    if (value instanceof Integer) {
+    if (value instanceof Number) {
       this.constants.set(node.name, value);
     } else {
       this.constants.delete(node.name);
@@ -56,7 +56,7 @@ class Optimizer extends ASTTraversal {
 
   visitVar(node: Var): AST {
     let value = node.value.visit(this);
-    if (value instanceof Integer) {
+    if (value instanceof Number) {
       this.constants.set(node.name, value);
     } else {
       this.constants.delete(node.name);
