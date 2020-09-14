@@ -4,7 +4,7 @@ import {
 
 import {
   AST, Main, Assert, Length, Number, Boolean, Undefined, Not, Equal, NotEqual,
-  Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block,
+  Add, Subtract, Multiply, Divide, Call, ArrayLiteral, ArrayLookup, Exit, Block,
   If, Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -53,7 +53,7 @@ let INTEGER =
   token(/[0-9]+/y).map((digits) =>
     new Number(parseInt(digits)));
 
-let bool: Parser<AST> = TRUE.or(FALSE)
+let boolean: Parser<AST> = TRUE.or(FALSE)
 
 let ID =
   token(/[a-zA-Z_][a-zA-Z0-9_]*/y);
@@ -95,7 +95,7 @@ let call: Parser<AST> =
 // array <- LEFT_BRACKET args RIGHT_BRACKET
 let array: Parser<AST> = 
   LEFT_BRACKET.and(args.bind((args) =>
-    RIGHT_BRACKET.and(constant(new ArrayNode(args)))))
+    RIGHT_BRACKET.and(constant(new ArrayLiteral(args)))))
 
 // arrayLookup <- ID LEFT_BRACKET expression RIGHT_BRACKET
 let arrayLookup: Parser<AST> = 
@@ -103,10 +103,12 @@ let arrayLookup: Parser<AST> =
     LEFT_BRACKET.and(expression.bind((index) =>
       RIGHT_BRACKET.and(constant(new ArrayLookup(array, index))))));
 
+// scalar <- boolean / UNDEFINED / ID / INTEGER
+
 // atom <- 
-//   bool / UNDEFINED / call / arrayLookup / ID / INTEGER / array / LEFT_PAREN expression RIGHT_PAREN
+//   boolean / UNDEFINED / call / arrayLookup / ID / INTEGER / array / LEFT_PAREN expression RIGHT_PAREN
 let atom: Parser<AST> =
-  bool.or(UNDEFINED).or(call).or(arrayLookup).or(id).or(INTEGER).or(array).or(LEFT_PAREN.and(expression).bind((e) =>
+  boolean.or(UNDEFINED).or(call).or(arrayLookup).or(id).or(INTEGER).or(array).or(LEFT_PAREN.and(expression).bind((e) =>
     RIGHT_PAREN.and(constant(e))));
 
 // unary <- NOT? atom

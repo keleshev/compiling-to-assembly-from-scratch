@@ -4,7 +4,7 @@ import {
 
 import {
   AST, Main, Assert, Length, Number, Boolean, Undefined, Not, Equal, NotEqual,
-  Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  Add, Subtract, Multiply, Divide, Call, ArrayLiteral, ArrayLookup, Exit, Block, If,
   Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -102,7 +102,7 @@ class TypeChecker implements Visitor<Type> {
     return expected.returnType;
   }
 
-  visitArrayNode(node: ArrayNode): Type {
+  visitArrayLiteral(node: ArrayLiteral): Type {
     if (node.args.length == 0) {
       throw Error("Type error: can't infer type of an empty array");
     }

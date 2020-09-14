@@ -1,6 +1,6 @@
 import {
   AST, Main, Assert, Length, Number, Boolean, Undefined, Not, Equal, NotEqual,
-  Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  Add, Subtract, Multiply, Divide, Call, ArrayLiteral, ArrayLookup, Exit, Block, If,
   Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -141,7 +141,7 @@ class CodeGenerator implements Visitor<void> {
     }
   }
 
-  visitArrayNode(node: ArrayNode) {
+  visitArrayLiteral(node: ArrayLiteral) {
     emit(`  push {r4, ip}`);
     emit(`  ldr r0, =${4 * (node.args.length + 1)}`);
     emit(`  bl malloc`);
@@ -420,7 +420,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
     }
   }
 
-  visitArrayNode(node: ArrayNode) {
+  visitArrayLiteral(node: ArrayLiteral) {
     emit(`  push {r4, ip}`);
     emit(`  ldr r0, =${4 * (node.args.length + 1)}`);
     emit(`  bl malloc`);

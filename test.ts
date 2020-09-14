@@ -4,7 +4,7 @@ import {
 
 import {
   AST, Main, Assert, Number, Boolean, Not, Equal, NotEqual, Add, Subtract,
-  Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  Multiply, Divide, Call, ArrayLiteral, ArrayLookup, Exit, Block, If,
   Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 

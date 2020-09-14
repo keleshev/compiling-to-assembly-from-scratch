@@ -168,13 +168,13 @@ class Call implements AST {
   }
 }
 
-class ArrayNode implements AST {
+class ArrayLiteral implements AST {
   constructor(public args: Array<AST>) {}
 
-  visit<T>(v: Visitor<T>) { return v.visitArrayNode(this); }
+  visit<T>(v: Visitor<T>) { return v.visitArrayLiteral(this); }
 
   equals(other: AST): boolean {
-    return other instanceof ArrayNode &&
+    return other instanceof ArrayLiteral &&
       this.args.length === other.args.length &&
       this.args.every((arg, i) => arg.equals(other.args[i]));
   }
@@ -319,7 +319,7 @@ interface Visitor<T> {
   visitMultiply(node: Multiply): T;
   visitDivide(node: Divide): T;
   visitCall(node: Call): T;
-  visitArrayNode(node: ArrayNode): T;
+  visitArrayLiteral(node: ArrayLiteral): T;
   visitArrayLookup(node: ArrayLookup): T;
   visitExit(node: Exit): T;
   visitBlock(node: Block): T;
@@ -348,7 +348,7 @@ export {
   Multiply,
   Divide,
   Call,
-  ArrayNode,
+  ArrayLiteral,
   ArrayLookup,
   Exit,
   Block,

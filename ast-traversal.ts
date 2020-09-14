@@ -1,6 +1,6 @@
 import {
   AST, Main, Assert, Length, Number, Boolean, Undefined, Not, Equal, NotEqual,
-  Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, 
+  Add, Subtract, Multiply, Divide, Call, ArrayLiteral, ArrayLookup, Exit, Block, 
   If, Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
@@ -79,9 +79,9 @@ class ASTTraversal implements Visitor<AST> {
     return new Call(node.callee, args);
   }
 
-  visitArrayNode(node: ArrayNode): AST {
+  visitArrayLiteral(node: ArrayLiteral): AST {
     let args = node.args.map((arg) => arg.visit(this));
-    return new ArrayNode(args);
+    return new ArrayLiteral(args);
   }
 
   visitArrayLookup(node: ArrayLookup): AST {

@@ -1,6 +1,6 @@
 import {
   AST, Main, Assert, Number, Boolean, Undefined, Not, Equal, NotEqual, Add,
-  Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
+  Subtract, Multiply, Divide, Call, ArrayLiteral, ArrayLookup, Exit, Block, If,
   Function, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
 
