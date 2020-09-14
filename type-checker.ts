@@ -1,9 +1,9 @@
 import { 
-  Type, BoolType, IntegerType, VoidType, ArrayType, FunctionType,
+  Type, BooleanType, IntegerType, VoidType, ArrayType, FunctionType,
 } from "./types";
 
 import {
-  AST, Main, Assert, Length, Integer, Bool, Undefined, Not, Equal, NotEqual,
+  AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -26,7 +26,7 @@ class TypeChecker implements Visitor<Type> {
   }
 
   visitAssert(node: Assert) {
-    assertType(new BoolType(), node.condition.visit(this));
+    assertType(new BooleanType(), node.condition.visit(this));
     return new VoidType();
   }
 
@@ -39,8 +39,8 @@ class TypeChecker implements Visitor<Type> {
     return new IntegerType();
   }
 
-  visitBool(node: Bool) {
-    return new BoolType();
+  visitBoolean(node: Boolean) {
+    return new BooleanType();
   }
 
   visitUndefined(node: Undefined) {
@@ -48,22 +48,22 @@ class TypeChecker implements Visitor<Type> {
   }
 
   visitNot(node: Not) {
-    assertType(new BoolType(), node.term.visit(this));
-    return new BoolType();
+    assertType(new BooleanType(), node.term.visit(this));
+    return new BooleanType();
   }
 
   visitEqual(node: Equal) {
     let leftType = node.left.visit(this);
     let rightType = node.right.visit(this);
     assertType(leftType, rightType);
-    return new BoolType();
+    return new BooleanType();
   }
 
   visitNotEqual(node: NotEqual) {
     let leftType = node.left.visit(this);
     let rightType = node.right.visit(this);
     assertType(leftType, rightType);
-    return new BoolType();
+    return new BooleanType();
   }
 
   visitAdd(node: Add) {

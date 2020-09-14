@@ -1,9 +1,9 @@
 import { 
-  Type, BoolType, IntegerType, VoidType, ArrayType, FunctionType,
+  Type, BooleanType, IntegerType, VoidType, ArrayType, FunctionType,
 } from "./types";
 
 import {
-  AST, Main, Assert, Integer, Bool, Not, Equal, NotEqual, Add, Subtract,
+  AST, Main, Assert, Integer, Boolean, Not, Equal, NotEqual, Add, Subtract,
   Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -278,7 +278,7 @@ test("End-to-end test", () => {
       assert(a[0] == 10);
       assert(a[1] == 20);
       assert(a[2] == 30);
-      assert(a[3] == undefined); // Bounds checking             TODO: undefined literal
+      assert(a[3] == undefined); // Bounds checking
       assert(a[10000000] == undefined); // Bounds checking
       assert(length(a) == 3);
 

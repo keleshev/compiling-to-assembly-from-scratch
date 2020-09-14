@@ -1,5 +1,5 @@
 import {
-  AST, Main, Assert, Integer, Bool, Undefined, Not, Equal, NotEqual, Add,
+  AST, Main, Assert, Integer, Boolean, Undefined, Not, Equal, NotEqual, Add,
   Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block, If,
   FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";

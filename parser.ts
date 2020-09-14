@@ -1,9 +1,9 @@
 import { 
-  Type, BoolType, IntegerType, VoidType, ArrayType, FunctionType,
+  Type, BooleanType, IntegerType, VoidType, ArrayType, FunctionType,
 } from "./types";
 
 import {
-  AST, Main, Assert, Length, Integer, Bool, Undefined, Not, Equal, NotEqual,
+  AST, Main, Assert, Length, Integer, Boolean, Undefined, Not, Equal, NotEqual,
   Add, Subtract, Multiply, Divide, Call, ArrayNode, ArrayLookup, Exit, Block,
   If, FunctionDefinition, Id, Return, While, Assign, Var, Visitor,
 } from "./ast";
@@ -28,11 +28,11 @@ let WHILE = token(/while\b/y);
 let ELSE = token(/else\b/y);
 let RETURN = token(/return\b/y);
 let VAR = token(/var\b/y);
-let TRUE = token(/true\b/y).map((_) => new Bool(true));
-let FALSE = token(/false\b/y).map((_) => new Bool(false));
+let TRUE = token(/true\b/y).map((_) => new Boolean(true));
+let FALSE = token(/false\b/y).map((_) => new Boolean(false));
 let UNDEFINED = token(/undefined\b/y).map((_) => new Undefined());
 let VOID = token(/void\b/y).map((_) => new VoidType());
-let BOOLEAN = token(/boolean\b/y).map((_) => new BoolType());
+let BOOLEAN = token(/boolean\b/y).map((_) => new BooleanType());
 let NUMBER = token(/number\b/y).map((_) => new IntegerType());
 let ARRAY = token(/Array\b/y)
 

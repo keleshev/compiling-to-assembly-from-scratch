@@ -3,10 +3,10 @@ interface Type {
   toString(): string;
 }
 
-class BoolType implements Type {
+class BooleanType implements Type {
 
   equals(other: Type): boolean {
-    return other instanceof BoolType;
+    return other instanceof BooleanType;
   }
 
   toString() {
@@ -74,7 +74,7 @@ class FunctionType implements Type {
 
 export {
   Type,
-  BoolType,
+  BooleanType,
   IntegerType,
   VoidType,
   ArrayType,
