@@ -156,16 +156,29 @@ class CodeGenerator implements Visitor<void> {
     emit(`  pop {r4, ip}`);
   }
 
+  //visitArrayLookup(node: ArrayLookup) {
+  //  node.array.visit(this);
+  //  emit(`  push {r0, ip}`);
+  //  node.index.visit(this);
+  //  emit(`  pop {r1, ip}`);
+  //  // r0 => index, r1 => array, r2 => array length
+  //  emit(`  ldr r2, [r1], #4`);
+  //  emit(`  cmp r0, r2`);
+  //  emit(`  movhs r0, #0`);
+  //  emit(`  ldrlo r0, [r1, +r0, lsl #2]`);
+  //}
   visitArrayLookup(node: ArrayLookup) {
     node.array.visit(this);
     emit(`  push {r0, ip}`);
     node.index.visit(this);
     emit(`  pop {r1, ip}`);
     // r0 => index, r1 => array, r2 => array length
-    emit(`  ldr r2, [r1], #4`);
+    emit(`  ldr r2, [r1]`);
     emit(`  cmp r0, r2`);
     emit(`  movhs r0, #0`);
-    emit(`  ldrlo r0, [r1, +r0, lsl #2]`);
+    emit(`  addlo r1, r1, #4`);
+    emit(`  lsllo r0, r0, #2`);
+    emit(`  ldrlo r0, [r1, r0]`);
   }
 
   visitExit(node: Exit) {
@@ -421,9 +434,9 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
   }
 
   visitArrayLiteral(node: ArrayLiteral) {
-    emit(`  push {r4, ip}`);
     emit(`  ldr r0, =${4 * (node.args.length + 1)}`);
     emit(`  bl malloc`);
+    emit(`  push {r4, ip}`);
     emit(`  mov r4, r0`);
     emit(`  ldr r0, =${toSmallInteger(node.args.length)}`);
     emit(`  str r0, [r4]`);
@@ -436,6 +449,19 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
     emit(`  pop {r4, ip}`);
   }
 
+//  visitArrayLookup(node: ArrayLookup) {
+//    node.array.visit(this);
+//    emit(`  bic r0, r0, #${arrayTag}`); // Remove tag
+//    emit(`  push {r0, ip}`);
+//    node.index.visit(this);
+//    emit(`  pop {r1, ip}`);
+//    // r0 => index, r1 => array, r2 => array length
+//    emit(`  ldr r2, [r1], #4`);
+//    emit(`  cmp r0, r2`);
+//    emit(`  movhs r0, #${undefinedBitPattern}`);
+//    emit(`  ldrlo r0, [r1, r0]`);
+//  }
+//
   visitArrayLookup(node: ArrayLookup) {
     node.array.visit(this);
     emit(`  bic r0, r0, #${arrayTag}`); // Remove tag
@@ -446,7 +472,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
     emit(`  ldr r2, [r1], #4`);
     emit(`  cmp r0, r2`);
     emit(`  movhs r0, #${undefinedBitPattern}`);
-    emit(`  ldrlo r0, [r1, +r0]`);
+    emit(`  ldrlo r0, [r1, r0]`);
   }
 
   visitExit(node: Exit) {

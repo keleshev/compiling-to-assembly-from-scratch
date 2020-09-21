@@ -31,8 +31,12 @@ class TypeChecker implements Visitor<Type> {
   }
 
   visitLength(node: Length) {
-    node.array.visit(this);
-    return new NumberType();
+    let type = node.array.visit(this);
+    if (type instanceof ArrayType) {
+      return new NumberType();
+    } else {
+      throw Error(`Type error: expected an array, but got ${type}`);
+    }
   }
 
   visitNumber(node: Number) {
@@ -93,7 +97,7 @@ class TypeChecker implements Visitor<Type> {
   visitCall(node: Call) {
     let expected = this.functions.get(node.callee);
     if (!expected) {
-      throw Error(`Type error: function ${node.callee} is not defined`); 
+      throw TypeError(`Function ${node.callee} is not defined`); 
     }
     let argsTypes = new Map();
     node.args.forEach((arg, i) => argsTypes.set(`x${i}`, arg.visit(this)));
@@ -104,7 +108,7 @@ class TypeChecker implements Visitor<Type> {
 
   visitArrayLiteral(node: ArrayLiteral): Type {
     if (node.args.length == 0) {
-      throw Error("Type error: can't infer type of an empty array");
+      throw TypeError("Can't infer type of an empty array");
     }
     let argsTypes = node.args.map((arg) => arg.visit(this));
     // Assert all arguments have the same type, pairwise
@@ -121,7 +125,7 @@ class TypeChecker implements Visitor<Type> {
     if (type instanceof ArrayType) {
       return type.element;
     } else {
-      throw Error(`Type error: expected an array, but got ${type}`);
+      throw TypeError(`Expected an array, but got ${type}`);
     }
   }
 
@@ -159,7 +163,7 @@ class TypeChecker implements Visitor<Type> {
   visitId(node: Id) {
     let type = this.locals.get(node.value);
     if (!type) {
-      throw Error(`Type error: undefined variable ${node.value}`);
+      throw TypeError(`Undefined variable ${node.value}`);
     }
     return type;
   }
@@ -183,7 +187,7 @@ class TypeChecker implements Visitor<Type> {
   visitAssign(node: Assign) {
     let variableType = this.locals.get(node.name);
     if (!variableType) {
-      throw Error(`Type error: assignment to an undefined variable ${node.name}`);
+      throw TypeError(`Assignment to an undefined variable ${node.name}`);
     }
     let valueType = node.value.visit(this);
     assertType(variableType, valueType);

@@ -92,8 +92,8 @@ let call: Parser<AST> =
             ? new Assert(args[0])
             : new Call(callee, args))))));
 
-// array <- LEFT_BRACKET args RIGHT_BRACKET
-let array: Parser<AST> = 
+// arrayLiteral <- LEFT_BRACKET args RIGHT_BRACKET
+let arrayLiteral: Parser<AST> = 
   LEFT_BRACKET.and(args.bind((args) =>
     RIGHT_BRACKET.and(constant(new ArrayLiteral(args)))))
 
@@ -106,9 +106,9 @@ let arrayLookup: Parser<AST> =
 // scalar <- boolean / UNDEFINED / ID / INTEGER
 
 // atom <- 
-//   boolean / UNDEFINED / call / arrayLookup / ID / INTEGER / array / LEFT_PAREN expression RIGHT_PAREN
+//   boolean / UNDEFINED / call / arrayLookup / ID / INTEGER / arrayLiteral / LEFT_PAREN expression RIGHT_PAREN
 let atom: Parser<AST> =
-  boolean.or(UNDEFINED).or(call).or(arrayLookup).or(id).or(INTEGER).or(array).or(LEFT_PAREN.and(expression).bind((e) =>
+  boolean.or(UNDEFINED).or(call).or(arrayLookup).or(id).or(INTEGER).or(arrayLiteral).or(LEFT_PAREN.and(expression).bind((e) =>
     RIGHT_PAREN.and(constant(e))));
 
 // unary <- NOT? atom

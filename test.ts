@@ -175,6 +175,10 @@ test("End-to-end test", () => {
       assert(d == 4);
     }
 
+    function pair(x: number, y: number): Array<number> {
+      return [x, y];
+    }
+
     function factorial(n: number): number {
       if (n == 0) {
         return 1;
@@ -303,5 +307,6 @@ test("End-to-end test", () => {
   //ast.visit(typeChecker);
 
   let codeGenerator = new CodeGeneratorDynamicTyping();
+  //let codeGenerator = new CodeGenerator();
   ast.visit(codeGenerator);
 });
