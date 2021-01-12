@@ -142,9 +142,9 @@ class CodeGenerator implements Visitor<void> {
   }
 
   visitArrayLiteral(node: ArrayLiteral) {
-    emit(`  push {r4, ip}`);
     emit(`  ldr r0, =${4 * (node.args.length + 1)}`);
     emit(`  bl malloc`);
+    emit(`  push {r4, ip}`);
     emit(`  mov r4, r0`);
     emit(`  ldr r0, =${node.args.length}`);
     emit(`  str r0, [r4]`);
@@ -290,7 +290,7 @@ let toSmallInteger = (n: number) => n << 2;
 
 let tagBitMask = 0b11;
 let falsyTag = 0b10;
-let arrayTag = 0b01;
+let pointerTag = 0b01;
 
 class CodeGeneratorDynamicTyping implements Visitor<void> {
   constructor(public locals: Map<string, number> = new Map(),
@@ -404,7 +404,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
     emit(`  cmp r2, #0`); 
 
     emit(`  muleq r0, r1, r0`);
-    emit(`  lsr r0, r0, #2`);
+    emit(`  lsreq r0, r0, #2`);
     emit(`  movne r0, #${undefinedBitPattern}`);
   }
 
@@ -444,14 +444,13 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
       arg.visit(this);
       emit(`  str r0, [r4, #${4 * (i + 1)}]`);
     });
-    emit(`  mov r0, r4`);
-    emit(`  orr r0, r0, #${arrayTag}`); // Add tag
+    emit(`  add r0, r4, #1`);  // Move to r0 and add tag
     emit(`  pop {r4, ip}`);
   }
 
 //  visitArrayLookup(node: ArrayLookup) {
 //    node.array.visit(this);
-//    emit(`  bic r0, r0, #${arrayTag}`); // Remove tag
+//    emit(`  bic r0, r0, #${pointerTag}`); // Remove tag
 //    emit(`  push {r0, ip}`);
 //    node.index.visit(this);
 //    emit(`  pop {r1, ip}`);
@@ -464,7 +463,7 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
 //
   visitArrayLookup(node: ArrayLookup) {
     node.array.visit(this);
-    emit(`  bic r0, r0, #${arrayTag}`); // Remove tag
+    emit(`  bic r0, r0, #${pointerTag}`); // Remove tag
     emit(`  push {r0, ip}`);
     node.index.visit(this);
     emit(`  pop {r1, ip}`);

@@ -60,13 +60,18 @@ class Parser<T> {
     });
   }
 
-  bind<U>(callback: (value: T) => Parser<U>): Parser<U> {
+  bind<U>(
+    callback: (value: T) => Parser<U>,
+  ): Parser<U> {
     return new Parser((source) => {
       let result = this.parse(source);
-      if (result)
-        return callback(result.value).parse(result.source);
-      else
+      if (result) {
+        let value = result.value;
+        let source = result.source;
+        return callback(value).parse(source);
+      } else {
         return null;
+      }
     });
   }
 
