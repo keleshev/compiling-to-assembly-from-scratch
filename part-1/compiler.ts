@@ -160,7 +160,7 @@ let RIGHT_BRACE = token(/[}]/y);
 
 let INTEGER =
   token(/[0-9]+/y).map((digits) =>
-    new Integer(parseInt(digits)));
+    new Number(parseInt(digits, 10)));
 
 let ID =
   token(/[a-zA-Z_][a-zA-Z0-9_]*/y);
@@ -287,7 +287,7 @@ let functionStatement: Parser<AST> =
         constant(
           name === '__main'
             ? new Main(block.statements)
-            : new FunctionDefinition(name, parameters, block)))));
+            : new Function(name, parameters, block)))));
 
 
 // statement <- returnStatement 
@@ -376,7 +376,7 @@ class Assert implements AST {
   }
 }
 
-class Integer implements AST {
+class Number implements AST {
   constructor(public value: number) {}
 
   emit(env: Environment) {
@@ -384,7 +384,7 @@ class Integer implements AST {
   }
 
   equals(other: AST): boolean {
-    return other instanceof Integer &&
+    return other instanceof Number &&
       this.value === other.value;
   }
 }
@@ -607,7 +607,7 @@ class If implements AST {
   }
 }
 
-class FunctionDefinition implements AST {
+class Function implements AST {
   constructor(public name: string,
               public parameters: Array<string>,
               public body: AST) {}
@@ -651,7 +651,7 @@ class FunctionDefinition implements AST {
   }
 
   equals(other: AST): boolean {
-    return other instanceof FunctionDefinition &&
+    return other instanceof Function &&
       this.name === other.name &&
       this.parameters.length === other.parameters.length &&
       this.parameters.every((parameter, i) =>
@@ -790,7 +790,7 @@ test("Statement parser", () => {
     new If(x, new Block([new Return(y)]), new Block([new Return(z)]))));
 
   console.assert(parse('function id(x) { return x; }').equals(
-    new FunctionDefinition('id', ['x'], new Block([new Return(x)]))));
+    new Function('id', ['x'], new Block([new Return(x)]))));
 });
 
 test("Parser integration test", () => {
@@ -806,11 +806,11 @@ test("Parser integration test", () => {
   `;
 
   let expected = new Block([
-    new FunctionDefinition("factorial", ["n"], new Block([
-      new Var("result", new Integer(1)),
-      new While(new NotEqual(new Id("n"), new Integer(1)), new Block([
+    new Function("factorial", ["n"], new Block([
+      new Var("result", new Number(1)),
+      new While(new NotEqual(new Id("n"), new Number(1)), new Block([
         new Assign("result", new Multiply(new Id("result"), new Id("n"))),
-        new Assign("n", new Subtract(new Id("n"), new Integer(1))),
+        new Assign("n", new Subtract(new Id("n"), new Number(1))),
       ])),
       new Return(new Id("result")),
     ])),
@@ -824,7 +824,7 @@ test("Parser integration test", () => {
 test("End-to-end test", () => {
   let source = `
     function main() {
-      // Test Integer
+      // Test Number
       assert(1);
 
       // Test Not
@@ -937,3 +937,5 @@ test("End-to-end test", () => {
 
   ast.emit(new Environment());
 });
+
+export {}
