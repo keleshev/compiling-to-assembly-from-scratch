@@ -28,19 +28,21 @@ class Source {
 test("Source matching is idempotent", () => {
   let s = new Source('  let', 2);
   let result1 = s.match(/let/y);
-  console.assert(result1.value == 'let' && result1.source.index == 5);
+  console.assert(result1 !== null && result1.value === 'let');
+  console.assert(result1 !== null && result1.source.index == 5);
   let result2 = s.match(/let/y);
-  console.assert(result2.value == 'let' && result2.source.index == 5);
+  console.assert(result2 !== null && result2.value === 'let');
+  console.assert(result2 !== null && result2.source.index == 5);
 });
 
 
 interface Parser<T> {
-  parse(Source): ParseResult<T> | null;
+  parse(source: Source): ParseResult<T> | null;
 }
 
 
 class Parser<T> {
-  constructor(public parse: (Source) => (ParseResult<T> | null)) {}
+  constructor(public parse: (s: Source) => (ParseResult<T> | null)) {}
 
   /* Primitive combinators */
 
@@ -78,7 +80,7 @@ class Parser<T> {
     });
   }
 
-  bind<U>(callback: (T) => Parser<U>): Parser<U> {
+  bind<U>(callback: (t: T) => Parser<U>): Parser<U> {
     return new Parser((source) => {
       let result = this.parse(source);
       if (result)
@@ -98,7 +100,7 @@ class Parser<T> {
     return this.bind((value) => constant(callback(value)));
   }
 
-  static maybe<U>(parser: Parser<U>): Parser<U | null> {
+  static maybe<U>(parser: Parser<U | null>): Parser<U | null> {
     return parser.or(constant(null));
   }
 
@@ -137,7 +139,7 @@ let whitespace = regexp(/[ \n\r\t]+/y);
 let comments = regexp(/[/][/].*/y).or(regexp(/[/][*].*[*][/]/sy))
 let ignored = zeroOrMore(whitespace.or(comments));
 
-let token = (pattern) =>
+let token = (pattern: RegExp) =>
   Parser.regexp(pattern).bind((value) =>
     ignored.and(constant(value)));
 
@@ -205,7 +207,7 @@ let unary: Parser<AST> =
   maybe(NOT).bind((not) =>
     atom.map((term) => not ? new Not(term) : term));
 
-let infix = (operatorParser, termParser) =>
+let infix = (operatorParser: Parser<new (left: AST, right: AST) => AST>, termParser: Parser<AST>) =>
   termParser.bind((term) =>
     zeroOrMore(operatorParser.bind((operator) =>
       termParser.bind((term) => 
@@ -266,7 +268,7 @@ let assignmentStatement: Parser<AST> =
       SEMICOLON.and(constant(new Assign(name, value)))));
 
 // blockStatement <- LEFT_BRACE statement* RIGHT_BRACE
-let blockStatement: Parser<AST> =
+let blockStatement: Parser<Block> =
   LEFT_BRACE.and(zeroOrMore(statement)).bind((statements) =>
     RIGHT_BRACE.and(constant(new Block(statements))));
 
@@ -331,8 +333,8 @@ class Environment {
 }
 
 interface AST {
-  emit(Environment): void; 
-  equals(AST): boolean;
+  emit(env: Environment): void;
+  equals(node: AST): boolean;
 }
 
 class Main implements AST {
@@ -349,7 +351,7 @@ class Main implements AST {
     emit(`  pop {fp, pc}`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Main &&
       this.statements.length === other.statements.length &&
       this.statements.every((statement, i) =>
@@ -368,7 +370,7 @@ class Assert implements AST {
     emit(`  bl putchar`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Assert && 
       this.condition.equals(other.condition);
   }
@@ -381,7 +383,7 @@ class Integer implements AST {
     emit(`  ldr r0, =${this.value}`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Integer &&
       this.value === other.value;
   }
@@ -397,7 +399,7 @@ class Not implements AST {
     emit(`  movne r0, #0`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Not && this.term.equals(other.term);
   }
 }
@@ -415,7 +417,7 @@ class Equal implements AST {
     emit(`  movne r0, #0`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Equal &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -435,7 +437,7 @@ class NotEqual implements AST {
     emit(`  moveq r0, #0`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof NotEqual &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -453,7 +455,7 @@ class Add implements AST {
     emit(`  add r0, r1, r0`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Add &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -471,7 +473,7 @@ class Subtract implements AST {
     emit(`  sub r0, r1, r0`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Subtract &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -489,7 +491,7 @@ class Multiply implements AST {
     emit(`  mul r0, r1, r0`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Multiply &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -507,7 +509,7 @@ class Divide implements AST {
     emit(`  udiv r0, r1, r0`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Divide &&
       this.left.equals(other.left) &&
       this.right.equals(other.right);
@@ -537,7 +539,7 @@ class Call implements AST {
     }
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Call &&
       this.callee === other.callee &&
       this.args.length === other.args.length &&
@@ -548,7 +550,7 @@ class Call implements AST {
 class Exit implements AST {
   constructor(public term: AST) {}
 
-  emit(env) {
+  emit(env: Environment) {
     let syscallNumber = 1;
     emit(`  mov r0, #0`);
     emit(`  bl fflush`);
@@ -557,7 +559,7 @@ class Exit implements AST {
     emit(`  swi #0`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Exit && this.term.equals(other.term);
   }
 }
@@ -571,7 +573,7 @@ class Block implements AST {
     );
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Block &&
       this.statements.length === other.statements.length &&
       this.statements.every((statement, i) =>
@@ -597,7 +599,7 @@ class If implements AST {
     emit(`${endIfLabel}:`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof If &&
       this.conditional.equals(other.conditional) &&
       this.consequence.equals(other.consequence) &&
@@ -648,7 +650,7 @@ class FunctionDefinition implements AST {
     emit(`  pop {fp, pc}`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof FunctionDefinition &&
       this.name === other.name &&
       this.parameters.length === other.parameters.length &&
@@ -671,7 +673,7 @@ class Id implements AST {
     }
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Id && 
       this.value === other.value;
   }
@@ -680,13 +682,13 @@ class Id implements AST {
 class Return implements AST {
   constructor(public term: AST) {}
 
-  emit(env) {
+  emit(env: Environment) {
     this.term.emit(env);
     emit(`  mov sp, fp`);
     emit(`  pop {fp, pc}`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Return && 
       this.term.equals(other.term);
   }
@@ -708,7 +710,7 @@ class While implements AST {
     emit(`${loopEnd}:`);
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof While &&
       this.conditional.equals(other.conditional) &&
       this.body.equals(other.body);
@@ -728,7 +730,7 @@ class Assign implements AST {
     }
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Assign &&
       this.name === other.name &&
       this.value.equals(other.value);
@@ -745,7 +747,7 @@ class Var implements AST {
     env.nextLocalOffset -= 8;
   }
 
-  equals(other: AST) {
+  equals(other: AST): boolean {
     return other instanceof Var &&
       this.name === other.name &&
       this.value.equals(other.value);
@@ -755,7 +757,7 @@ class Var implements AST {
 test("Expression parser", () => {
   console.log();
   let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
-  let parse = (string) => expression.parseStringToCompletion(string);
+  let parse = (s: string) => expression.parseStringToCompletion(s);
 
   console.assert(parse('x + y + z').equals(new Add(new Add(x, y), z)));
   console.assert(parse('x + y * z').equals(new Add(x, new Multiply(y, z))));
@@ -772,7 +774,7 @@ test("Expression parser", () => {
 test("Statement parser", () => {
   console.log();
   let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
-  let parse = (string) => statement.parseStringToCompletion(string);
+  let parse = (s: string) => statement.parseStringToCompletion(s);
 
   console.assert(parse('return x;').equals(new Return(x)));
   console.assert(parse('returnx;').equals(new Id('returnx')));
