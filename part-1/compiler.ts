@@ -668,7 +668,6 @@ class Id implements AST {
     if (offset) {
       emit(`  ldr r0, [fp, #${offset}]`);
     } else {
-      console.log(env);
       throw Error(`Undefined variable: ${this.value}`);
     }
   }

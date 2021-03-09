@@ -174,16 +174,22 @@ RIGHT_BRACE = token(re('[}]'))
 
 
 
+class Label:
+    counter = 0
+    value: int
 
-
+    def __init__(self):
+        Label.counter += 1
+        self.value = Label.counter
+    
+    def __str__(self):
+        return f'.L{self.value}'
 
 
 @dataclass
 class Environment:
     locals: dict[str, int]
     next_local_offset: int
-
-
 
 
 class AST(metaclass=ABCMeta):
@@ -241,25 +247,263 @@ class Not(AST):
         emit('  movne r0, #0')
 
 
+@dataclass
+class Equal(AST):
+    left: AST
+    right: AST
+
+    def emit(self, env: Environment):
+        self.left.emit(env)
+        emit('  push {r0, ip}')
+        self.right.emit(env)
+        emit('  pop {r1, ip}')
+        emit('  cmp r0, r1')
+        emit('  moveq r0, #1')
+        emit('  movne r0, #0')
 
 
+@dataclass
+class NotEqual(AST):
+    left: AST
+    right: AST
+
+    def emit(self, env: Environment):
+        self.left.emit(env)
+        emit('  push {r0, ip}')
+        self.right.emit(env)
+        emit('  pop {r1, ip}')
+        emit('  cmp r0, r1')
+        emit('  movne r0, #1')
+        emit('  moveq r0, #0')
 
 
+@dataclass
+class Add(AST):
+    left: AST
+    right: AST
+
+    def emit(self, env: Environment):
+        self.left.emit(env)
+        emit('  push {r0, ip}')
+        self.right.emit(env)
+        emit('  pop {r1, ip}')
+        emit('  add r0, r1, r0')
 
 
+@dataclass
+class Subtract(AST):
+    left: AST
+    right: AST
+
+    def emit(self, env: Environment):
+        self.left.emit(env)
+        emit('  push {r0, ip}')
+        self.right.emit(env)
+        emit('  pop {r1, ip}')
+        emit('  sub r0, r1, r0')
 
 
+@dataclass
+class Multiply(AST):
+    left: AST
+    right: AST
+
+    def emit(self, env: Environment):
+        self.left.emit(env)
+        emit('  push {r0, ip}')
+        self.right.emit(env)
+        emit('  pop {r1, ip}')
+        emit('  mul r0, r1, r0')
 
 
+@dataclass
+class Divide(AST):
+    left: AST
+    right: AST
+
+    def emit(self, env: Environment):
+        self.left.emit(env)
+        emit('  push {r0, ip}')
+        self.right.emit(env)
+        emit('  pop {r1, ip}')
+        emit('  udiv r0, r1, r0')
 
 
+@dataclass
+class Call(AST):
+    callee: str
+    args: list[AST]
+
+    def emit(self, env: Environment):
+        count = len(self.args)
+        if count == 0:
+            emit(f'  bl {self.callee}')
+        elif count == 1:
+            self.args[0].emit(env)
+            emit(f'  bl {self.callee}')
+        elif 2 <= count <= 4:
+            emit('  sub sp, sp, #16')
+            for i, arg in enumerate(self.args):
+                arg.emit(env)
+                emit(f'  str r0, [sp, #{4 * i}]')
+            emit('  pop {r0, r1, r2, r3}')
+            emit(f'  bl {self.callee}')
+        else:
+            raise Error('More than 4 arguments are not supported')
 
 
+@dataclass
+class Exit(AST):
+    term: AST
+
+    def emit(self, env: Environment):
+        syscall_number = 1
+        emit('  mov r0, #0')
+        emit('  bl fflush')
+        self.term.emit(env)
+        emit(f'  mov r7, #{syscall_number}')
+        emit('  swi #0')
 
 
+@dataclass
+class Block(AST):
+    statements: list[AST]
+
+    def emit(self, env: Environment):
+        for statement in self.statements:
+            statement.emit(env)
 
 
+@dataclass
+class If(AST):
+    conditional: AST
+    consequence: AST
+    alternative: AST
 
+    def emit(self, env: Environment):
+        if_false_label = Label()
+        end_if_label = Label()
+        self.conditional.emit(env)
+        emit('  cmp r0, #0')
+        emit(f'  beq {if_false_label}')
+        self.consequence.emit(env)
+        emit(f'  b {end_if_label}')
+        emit(f'{if_false_label}:')
+        self.alternative.emit(env)
+        emit(f'{end_if_label}:')
+
+
+@dataclass
+class Function(AST):
+    name: str
+    parameters: list[str]
+    body: AST
+
+    def emit(self, _: Environment):
+        if len(self.parameters) > 4:
+            raise Error('More than 4 params is not supported')
+
+        emit('')
+        emit(f'.global {self.name}')
+        emit(f'{self.name}:')
+
+        self.emit_prologue()
+        env = self.set_up_environment()
+        self.body.emit(env)
+        self.emit_epilogue()
+
+    def emit_prologue(self):
+        emit('  push {fp, lr}')
+        emit('  mov fp, sp')
+        emit('  push {r0, r1, r2, r3')
+        # Alternatively:
+        # emit('  push {r0, r1, r2, r3, fp, lr}')
+        # emit('  add fp, sp, #16')
+
+    def set_up_environment(self):
+        env = Environment({}, 0)
+        for i, parameter in enumerate(self.parameters):
+            env.locals[parameter] = 4 * i - 16
+        env.next_local_offset = -20
+        return env
+
+    def emit_epilogue(self):
+        emit('  mov sp, fp')
+        emit('  mov r0, #0')
+        emit('  pop {fp, pc}')
+
+
+@dataclass
+class Id(AST):
+    value: str
+
+    def emit(self, env: Environment):
+        offset = env.locals.get(self.value)
+        if offset:
+            emit(f'  ldr r0, [fp, #{offset}]')
+        else:
+            raise Error(f'Undefined variable: {self.value}')
+
+
+@dataclass
+class Return(AST):
+    term: AST
+
+    def emit(self, env: Environment):
+        self.term.emit(env)
+        emit('  mov sp, fp')
+        emit('  pop {fp, pc')
+
+
+@dataclass
+class While(AST):
+    conditional: AST
+    body: AST
+
+    def emit(self, env: Environment):
+        loop_start = Label()
+        loop_end = Label()
+
+        emit(f'{loop_start}:')
+        self.conditional.emit(env)
+        emit('  cmp r0, #0')
+        emit(f'  beq {loop_end}')
+        self.body.emit(env)
+        emit(f'  b {loop_start}')
+        emit(f'{loop_end}:')
+
+
+@dataclass
+class Assign(AST):
+    name: str
+    value: AST
+
+    def emit(self, env: Environment):
+        self.value.emit(env)
+        offset = env.locals.get(self.name)
+        if offset:
+            emit(f'  str r0, [fp, #{offset}]')
+        else:
+            raise Error(f'Undefined variable: {self.name}')
+
+
+@dataclass
+class Var(AST):
+    name: str
+    value: AST
+
+    def emit(self, env: Environment):
+        self.value.emit(env)
+        emit('  push {r0, ip}')
+        env.locals[self.name] = env.next_local_offset - 4
+        env.next_local_offset -= 8;
+
+
+# @test
+# def expression_parser():
+#     x, y, z = Id('x'), Id('y'), Id('z')
+#     def parse(s: str):
+#         return expression...
 
 
 
