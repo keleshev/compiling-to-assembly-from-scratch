@@ -167,12 +167,39 @@ RIGHT_PAREN = token(re('[)]'))
 LEFT_BRACE = token(re('[{]'))
 RIGHT_BRACE = token(re('[}]'))
 
-# INTEGER = token(re('[0-9]+')).map(lambda digits: Number
+INTEGER = token(re('[0-9]+')).map(lambda digits:
+    Number(int(digits)))
 
+ID = token(re('[a-zA-Z_][a-zA-Z0-9_]*'))
 
+id = ID.map(lambda x: Id(x))
 
+# Operators
+NOT = token(re('!')).map(lambda _: Not)
+EQUAL = token(re('==')).map(lambda _: Equal)
+NOT_EQUAL = token(re('!=')).map(lambda _: NotEqual)
+PLUS = token(re('[+]')).map(lambda _: Add)
+MINUS = token(re('[-]')).map(lambda _: Subtract)
+STAR = token(re('[*]')).map(lambda _: Multiply)
+SLASH = token(re('[\/]')).map(lambda _: Divide)
+ASSIGN = token(re('=')).map(lambda _: Assign)
 
+expression: Parser[AST] = \
+    Parser.error('expression parser used before definition')
 
+# args <- (expression (COMMA expression)*)?
+args = expression.bind(lambda arg:
+    zero_or_more(COMMA.and_(expression)).bind(lambda args:
+        constant([arg] + args))).or_(constant([]))
+
+# call <- ID LEFT_PAREN args RIGHT_PAREN
+call = ID.bind(lambda callee:
+    LEFT_PAREN.and_(args.bind(lambda args:
+        RIGHT_PAREN.and_(constant(Call(callee, args))))))
+
+# atom <- call / ID / INTEGER / LEFT_PAREN expression RIGHT_PAREN
+atom: Parser[AST] = call.or_(id).or_(INTEGER).or_(LEFT_PAREN.and_(expression).bind(lambda e:
+    RIGHT_PAREN.and_(constant(e))))
 
 class Label:
     counter = 0
