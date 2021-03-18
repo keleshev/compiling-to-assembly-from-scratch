@@ -5,8 +5,9 @@ from re import Pattern, compile as re
 from abc import ABCMeta, abstractmethod
 
 
-T = TypeVar('T')
+T = TypeVar('T', covariant=True)
 U = TypeVar('U')
+S = TypeVar('S')
 
 emit = print
 test = lambda f: f()
@@ -68,7 +69,7 @@ class Parser(Generic[T]):
             raise Exception(message)
         return Parser(error)
 
-    def or_(self, parser: Parser[T]) -> Parser[T]:
+    def or_(self, parser: Parser[U]) -> Parser[U]:
         def f(source: Source):
             result = self.parse(source)
             if result:
@@ -98,10 +99,10 @@ class Parser(Generic[T]):
 
     # Non-primitive, composite combinators
 
-    def and_(self, parser: Parser[U]) -> Parser[U]:
+    def and_(self: Parser[S], parser: Parser[U]) -> Parser[U]:
         return self.bind(lambda _: parser)
 
-    def map(self, callback: Callable[[T], U]) -> Parser[U]:
+    def map(self: Parser[S], callback: Callable[[S], U]) -> Parser[U]:
         return self.bind(lambda value: 
                  Parser.constant(callback(value)))
 
@@ -188,7 +189,7 @@ expression: Parser[AST] = \
     Parser.error('expression parser used before definition')
 
 # args <- (expression (COMMA expression)*)?
-args = expression.bind(lambda arg:
+args: Parser[list[AST]] = expression.bind(lambda arg:
     zero_or_more(COMMA.and_(expression)).bind(lambda args:
         constant([arg] + args))).or_(constant([]))
 
@@ -197,9 +198,12 @@ call = ID.bind(lambda callee:
     LEFT_PAREN.and_(args.bind(lambda args:
         RIGHT_PAREN.and_(constant(Call(callee, args))))))
 
+#atom: Parser[AST] = call
 # atom <- call / ID / INTEGER / LEFT_PAREN expression RIGHT_PAREN
-atom: Parser[AST] = call.or_(id).or_(INTEGER).or_(LEFT_PAREN.and_(expression).bind(lambda e:
-    RIGHT_PAREN.and_(constant(e))))
+atom: Parser[AST] = \
+    call.or_(id).or_(INTEGER).or_(
+        LEFT_PAREN.and_(expression).bind(lambda e:
+            RIGHT_PAREN.and_(constant(e))))
 
 class Label:
     counter = 0
