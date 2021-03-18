@@ -3,6 +3,7 @@ from typing import Protocol, Generic, TypeVar, Optional, Callable
 from dataclasses import dataclass
 from re import Pattern, compile as re
 from abc import ABCMeta, abstractmethod
+from functools import reduce
 
 
 T = TypeVar('T', covariant=True)
@@ -198,20 +199,138 @@ call = ID.bind(lambda callee:
     LEFT_PAREN.and_(args.bind(lambda args:
         RIGHT_PAREN.and_(constant(Call(callee, args))))))
 
-#atom: Parser[AST] = call
 # atom <- call / ID / INTEGER / LEFT_PAREN expression RIGHT_PAREN
 atom: Parser[AST] = \
     call.or_(id).or_(INTEGER).or_(
         LEFT_PAREN.and_(expression).bind(lambda e:
             RIGHT_PAREN.and_(constant(e))))
 
+unary: Parser[AST] = \
+    maybe(NOT).bind(lambda not_:
+        atom.map(lambda term: Not(term) if not_ else term))
+
+def infix(operator_parser: Parser[Callable[[AST, AST], AST]],
+          term_parser: Parser[AST]) -> Parser[AST]:
+    def reducer(left, operator_term):
+        operator, term = operator_term 
+        return operator(left, term)
+    return term_parser.bind(lambda term:
+            zero_or_more(operator_parser.bind(lambda operator:
+                term_parser.bind(lambda term:
+                    constant((operator, term))))).map(lambda operator_terms:
+                        reduce(reducer, operator_terms, term)))
+
+# product <- unary ((STAR / SLASH) unary)*
+product = infix(STAR.or_(SLASH), unary)
+
+# sum <- product ((PLUS / MINUS) product)*
+sum = infix(PLUS.or_(MINUS), product)
+
+# comparison <- sum ((EQUAL / NOT_EQUAL) sum)*
+comparison = infix(EQUAL.or_(NOT_EQUAL), sum)
+
+# expression <- comparison
+expression.__dict__['_parse'] = comparison.__dict__['_parse']
+
+
+statement: Parser[AST] = \
+    Parser.error("statement parser used before definition")
+
+# return_statement <- RETURN expression SEMICOLON
+return_statement: Parser[AST] = \
+    RETURN.and_(expression).bind(lambda term:
+        SEMICOLON.and_(constant(Return(term))))
+
+
+# expression_statement <- expression SEMICOLON
+expression_statement: Parser[AST] = \
+    expression.bind(lambda term: SEMICOLON.and_(constant(term)))
+
+# if_statement <- IF LEFT_PAREN expression RIGHT_PAREN statement ELSE statement
+if_statement: Parser[AST] = \
+    IF.and_(LEFT_PAREN).and_(expression).bind(lambda conditional:
+        RIGHT_PAREN.and_(statement).bind(lambda consequence:
+            ELSE.and_(statement).bind(lambda alternative:
+                constant(If(conditional, consequence, alternative)))))
+
+
+# while_statement <- WHILE LEFT_PAREN expression RIGHT_PAREN statement
+while_statement: Parser[AST] = \
+    WHILE.and_(LEFT_PAREN).and_(expression).bind(lambda conditional:
+        RIGHT_PAREN.and_(statement).bind(lambda body:
+            constant(While(conditional, body))))
+
+
+# var_statement <- VAR ID ASSIGN expression SEMICOLON
+var_statement: Parser[AST] = \
+    VAR.and_(ID).bind(lambda name:
+        ASSIGN.and_(expression).bind(lambda value:
+            SEMICOLON.and_(constant(Var(name, value)))))
+
+
+# assignment_statement <- ID ASSIGN expression SEMICOLON
+assignment_statement: Parser[AST] = \
+    ID.bind(lambda name:
+        ASSIGN.and_(expression).bind(lambda value:
+            SEMICOLON.and_(constant(Assign(name, value)))))
+
+
+# block_statement <- LEFT_BRACE statements* RIGHT_BRACE
+block_statement: Parser[Block] = \
+    LEFT_BRACE.and_(zero_or_more(statement)).bind(lambda statements:
+        RIGHT_BRACE.and_(constant(Block(statements))))
+
+
+# parameters <- (ID (COMMA ID)*)?
+parameters: Parser[list[str]] = \
+    ID.bind(lambda param:
+        zero_or_more(COMMA.and_(ID)).bind(lambda params:
+            constant([param] + params))).or_(constant([]))
+
+# function_statement <-
+#     FUNCTION ID LEFT_PAREN parameters RIGHT_PAREN
+#         block_statement
+function_statement: Parser[AST] = \
+    FUNCTION.and_(ID).bind(lambda name:
+        LEFT_PAREN.and_(parameters).bind(lambda parameters:
+            RIGHT_PAREN.and_(block_statement).bind(lambda block:
+                constant(Function(name, parameters, block)))))
+
+
+# statement <- return_statement
+#            / if_statement            
+#            / while_statement            
+#            / var_statement            
+#            / assignment_statement            
+#            / block_statement
+#            / function_statement
+#            / expression_statement
+# TODO: order doesn't match, does it matter?
+statement_parser: Parser[AST] = \
+    return_statement.or_(
+        function_statement).or_(
+            if_statement).or_(
+                while_statement).or_(
+                    var_statement).or_(
+                        assignment_statement).or_(
+                            block_statement).or_(
+                                expression_statement)
+
+statement.__dict__['_parse'] = statement_parser.__dict__['_parse']
+
+parser: Parser[AST] = \
+    ignored.and_(zero_or_more(statement)).map(lambda statements:
+        Block(statements))
+
+
+
 class Label:
     counter = 0
     value: int
 
     def __init__(self):
-        Label.counter += 1
         self.value = Label.counter
+        Label.counter += 1
     
     def __str__(self):
         return f'.L{self.value}'
@@ -264,7 +383,7 @@ class Number(AST):
     value: int
 
     def emit(self, env: Environment):
-        emit(f'  ldr r0,={self.value}')
+        emit(f'  ldr r0, ={self.value}')
 
 
 @dataclass
@@ -446,7 +565,7 @@ class Function(AST):
     def emit_prologue(self):
         emit('  push {fp, lr}')
         emit('  mov fp, sp')
-        emit('  push {r0, r1, r2, r3')
+        emit('  push {r0, r1, r2, r3}')
         # Alternatively:
         # emit('  push {r0, r1, r2, r3, fp, lr}')
         # emit('  add fp, sp, #16')
@@ -483,7 +602,7 @@ class Return(AST):
     def emit(self, env: Environment):
         self.term.emit(env)
         emit('  mov sp, fp')
-        emit('  pop {fp, pc')
+        emit('  pop {fp, pc}')
 
 
 @dataclass
@@ -530,11 +649,185 @@ class Var(AST):
         env.next_local_offset -= 8;
 
 
-# @test
-# def expression_parser():
-#     x, y, z = Id('x'), Id('y'), Id('z')
-#     def parse(s: str):
-#         return expression...
+@test
+def expression_parser():
+    x, y, z = Id('x'), Id('y'), Id('z')
+    def parse(s: str):
+        return expression.parse_string_to_completion(s)
+
+    assert parse('x + y + z') == Add(Add(x, y), z)
+    assert parse('x + y * z') == Add(x, Multiply(y, z))
+    assert parse('x * y + z') == Add(Multiply(x, y), z)
+    assert parse('(x + y) * z') == Multiply(Add(x, y), z)
+    assert parse('x == y + z') == Equal(x, Add(y, z))
+    assert parse('x + y == z') == Equal(Add(x, y), z)
+
+    assert parse('f()') == Call('f', [])
+    assert parse('f(x)') == Call('f', [x])
+    assert parse('f(x, y, z)') == Call('f', [x, y, z])
 
 
+@test
+def statement_parser_test():
+    x, y, z = Id('x'), Id('y'), Id('z')
+    def parse(s: str):
+        return statement.parse_string_to_completion(s)
+
+    assert parse('return x;') == Return(x)
+    assert parse('returnx;') == Id('returnx')
+    assert parse('x + y;') == Add(x, y)
+
+    assert parse('if (x) return y; else return z;') == \
+            If(x, Return(y), Return(z))
+    assert parse('{}') == Block([])
+    assert parse('{ x; y; }') == Block([x, y])
+    assert parse('if (x) { return y; } else { return z; }') == \
+            If(x, Block([Return(y)]), Block([Return(z)]))
+
+    assert parse('function id(x) { return x; }') == \
+            Function('id', ['x'], Block([Return(x)]))
+
+
+@test
+def parser_integration_test():
+    source = r"""
+        function factorial(n) {
+          var result = 1;
+          while (n != 1) {
+            result = result * n;
+            n = n - 1;
+          }
+          return result;
+        }
+    """
+    expected = Block([
+        Function("factorial", ["n"], Block([
+            Var("result", Number(1)),
+            While(NotEqual(Id("n"), Number(1)), Block([
+                Assign("result", Multiply(Id("result"), Id("n"))),
+                Assign("n", Subtract(Id("n"), Number(1))),
+            ])),
+            Return(Id("result")),
+        ]))
+    ])
+
+    result = parser.parse_string_to_completion(source)
+
+    assert result == expected
+
+
+@test
+def end_to_end_test():
+    source = r"""
+        function main() {
+          // Test Number
+          assert(1);
+
+          // Test Not
+          assert(!0);
+          assert(!(!1));
+
+          putchar(46);
+
+          // Test Equal
+          assert(42 == 42);
+          assert(!(0 == 42));
+
+          // Test NotEqual
+          assert(!(42 != 42));
+          assert(0 != 42);
+
+          // Test infix operators
+          assert(42 == 4 + 2 * (12 - 2) + 3 * (5 + 1));
+
+          // Test Call with no parameters
+          assert(return42() == 42);
+          assert(!returnNothing());
+
+          // Test multiple parameters
+          assert42(42);
+          assert1234(1, 2, 3, 4);
+
+          //assert(rand() != 42);
+          //assert(putchar() != 1);
+
+          //while (1) {
+          //  assert(1);
+          //}
+
+          // Test If
+          if (1)
+            assert(1);
+          else
+            assert(0);
+
+          if (0) {
+            assert(0);
+          } else {
+            assert(1);
+          }
+
+          assert(factorial(5) == 120);
+
+          var x = 4 + 2 * (12 - 2);
+          var y = 3 * (5 + 1);
+          var z = x + y;
+          assert(z == 42);
+
+          var a = 1;
+          assert(a == 1);
+          a = 0;
+          assert(a == 0);
+
+          // Test while loops
+          var i = 0;
+          while (i != 3) {
+            i = i + 1;
+          }
+          assert(i == 3);
+
+          assert(factorial2(5) == 120);
+
+          putchar(10); // Newline
+        }
+
+        function return42() { return 42; }
+        function returnNothing() {}
+        function assert42(x) {
+          assert(x == 42);
+        }
+        function assert1234(a, b, c, d) {
+          assert(a == 1);
+          assert(b == 2);
+          assert(c == 3);
+          assert(d == 4);
+        }
+
+        function assert(x) {
+          if (x) {
+            putchar(46);
+          } else {
+            putchar(70);
+          }
+        }
+
+        function factorial(n) {
+          if (n == 0) {
+            return 1;
+          } else {
+            return n * factorial(n - 1);
+          }
+        }
+
+        function factorial2(n) {
+          var result = 1;
+          while (n != 1) {
+            result = result * n;
+            n = n - 1;
+          }
+          return result;
+        }
+    """
+    ast = parser.parse_string_to_completion(source)
+    ast.emit(Environment({}, 0))
 
