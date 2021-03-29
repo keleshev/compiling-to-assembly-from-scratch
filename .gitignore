@@ -1,1 +1,10 @@
 build
+*.swo
+*.swp
+*.s
+*.exe
+*.annot
+*.cmi
+*.cmo
+a.out
+*.js
