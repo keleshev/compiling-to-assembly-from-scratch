@@ -1,18 +1,18 @@
 # Compiling to Assembly from Scratch
 
-This repository contains source code from the book [Compiling to Assembly from Scratch](https://keleshev.com/compiling-to-assembly-from-scratch-the-book).
+This repository contains source code from the book [Compiling to Assembly from Scratch](https://keleshev.com/compiling-to-assembly-from-scratch-the-book), including ports to other langauges (currently Python and OCaml).
 
 ## Structure
 
 * `part-1` folder contains the *baseline compiler* from *Part I* of the book.
 * `part-2` folder contains the *extended compiler* from *Part II* of the book.
-* `contrib` folder is for other versions of the compiler, for example, ports to other langugages that are not covered in the book. Currently it contains only an OCaml version, but you are welcome to contribute!
+* `contrib` folder is for other versions of the compiler. Currently Python and OCaml ports are included and contributions are welcome.
 
 
 
 ## Running the code
 
-The compilers are wirtten in TypeScript, so you need to install the TypeScript compiler.
+The book's compilers are wirtten in TypeScript, so you need to install the TypeScript compiler.
 TypeScript compiles to JavaScript, so you need Node to run it in a non-browser environment (however, it works in browser too).
 
 
