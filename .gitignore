@@ -8,3 +8,4 @@ build
 *.cmo
 a.out
 *.js
+/target
