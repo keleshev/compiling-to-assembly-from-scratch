@@ -55,7 +55,8 @@ class Parser<T> {
   }
 
   static error<U>(message: string): Parser<U> {
-    return new Parser(source => { throw Error(source.string.slice(source.index)) });
+    return new Parser(source => { throw Error(message) });
+    // return new Parser(source => { throw Error(source.string.slice(source.index)) });
   }
 
   or(parser: Parser<T>): Parser<T> {
@@ -158,7 +159,7 @@ let RIGHT_PAREN = token(/[)]/y);
 let LEFT_BRACE = token(/[{]/y);
 let RIGHT_BRACE = token(/[}]/y);
 
-let INTEGER =
+let NUMBER =
   token(/[0-9]+/y).map((digits) =>
     new Number(parseInt(digits, 10)));
 
@@ -197,9 +198,9 @@ let call: Parser<AST> =
           ? new Assert(args[0])
 	  : new Call(callee, args))))));
 
-// atom <- call / ID / INTEGER / LEFT_PAREN expression RIGHT_PAREN
+// atom <- call / ID / NUMBER / LEFT_PAREN expression RIGHT_PAREN
 let atom: Parser<AST> =
-  call.or(id).or(INTEGER).or(LEFT_PAREN.and(expression).bind((e) =>
+  call.or(id).or(NUMBER).or(LEFT_PAREN.and(expression).bind((e) =>
     RIGHT_PAREN.and(constant(e))));
 
 // unary <- NOT? atom
@@ -261,7 +262,7 @@ let varStatement: Parser<AST> =
     ASSIGN.and(expression).bind((value) => 
       SEMICOLON.and(constant(new Var(name, value)))));
 
-// assignmentStatement <- ID ASSIGN EXPRESSION SEMICOLON
+// assignmentStatement <- ID ASSIGN expression SEMICOLON
 let assignmentStatement: Parser<AST> =
   ID.bind((name) =>
     ASSIGN.and(expression).bind((value) => 
@@ -290,6 +291,7 @@ let functionStatement: Parser<AST> =
             : new Function(name, parameters, block)))));
 
 
+
 // statement <- returnStatement 
 //            / ifStatement 
 //            / whileStatement 
@@ -299,6 +301,7 @@ let functionStatement: Parser<AST> =
 //            / functionStatement
 //            / expressionStatement 
 let statementParser: Parser<AST> =
+  // TODO: order is not the same as in grammar, does it matter?
   returnStatement
     .or(functionStatement)
     .or(ifStatement)
@@ -754,7 +757,6 @@ class Var implements AST {
 }
 
 test("Expression parser", () => {
-  console.log();
   let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
   let parse = (s: string) => expression.parseStringToCompletion(s);
 
@@ -771,7 +773,6 @@ test("Expression parser", () => {
 });
 
 test("Statement parser", () => {
-  console.log();
   let [x, y, z] = [new Id('x'), new Id('y'), new Id('z')];
   let parse = (s: string) => statement.parseStringToCompletion(s);
 

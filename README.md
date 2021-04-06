@@ -1,12 +1,12 @@
 # Compiling to Assembly from Scratch
 
-This repository contains source code from the book [Compiling to Assembly from Scratch](https://keleshev.com/compiling-to-assembly-from-scratch-the-book), including ports to other langauges (currently Python and OCaml).
+This repository contains source code from the book [Compiling to Assembly from Scratch](https://keleshev.com/cas), plus ports to other langauges (currently Python, OCaml, and Rust)
 
 ## Structure
 
 * `part-1` folder contains the *baseline compiler* from *Part I* of the book.
 * `part-2` folder contains the *extended compiler* from *Part II* of the book.
-* `contrib` folder is for other versions of the compiler. Currently Python and OCaml ports are included and contributions are welcome.
+* `contrib` folder is for various other versions of the compiler. Contributions are welcome.
 
 
 
@@ -16,7 +16,7 @@ The book's compilers are wirtten in TypeScript, so you need to install the TypeS
 TypeScript compiles to JavaScript, so you need Node to run it in a non-browser environment (however, it works in browser too).
 
 
-## Rasperry Pi
+## On Rasperry Pi
 
 Install Node and TypeScript:
 
@@ -31,7 +31,7 @@ No emulation or cross-assembling necessary.
     $ make CC=gcc RUN=''
 
 
-## x86-64 Linux
+## On x86-64 Linux
 
 > This assumes `apt-get` package manager.
 

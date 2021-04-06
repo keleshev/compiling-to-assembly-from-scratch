@@ -79,6 +79,8 @@ class Parser(Generic[T]):
                 return parser.parse(source)
         return Parser(f)
 
+    __or__ = or_  # (x | y) could be used instead of x.or_(y)
+
     @staticmethod
     def zero_or_more(parser: Parser[U]) -> Parser[list[U]]:
         def f(source: Source):

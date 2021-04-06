@@ -30,3 +30,13 @@ ocaml str.cma part-1-compiler.ml
 ```
 
 It uses the `Str` regular expression library that is distributed with the OCaml compiler and doesn't need to be installed. The compiler also uses the new `let*` syntax, so you need to use a recent version of OCaml.
+
+Even though the compiler tries to follow the book closely, there are some differences:
+* `let*` syntax is used instead of `bind` because it is just *so* convenient here.
+* `let* _ = ...` is also used in several places instead of the `and` combinator.
+
+Other notes:
+* `constant` combinator follows the book naming, even though it is usually named `return` in OCaml.
+* `Parser.error` is defined but unused, because we can use `let rec` to define recursive grammars.
+* `Environment` is mutable similarly to the book, although an immutable approach would be more natural in OCaml.
+* `(or)` operator is semi-deprecated in OCaml, but is used anywhere because it matches the book well.
