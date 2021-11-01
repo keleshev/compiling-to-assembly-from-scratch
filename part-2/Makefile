@@ -17,7 +17,7 @@ test: build/test.exe phony
 	node $< > $@
 
 build/%.js: %.ts $(SOURCES) Makefile
-	tsc --strict --outdir build --module commonjs --target esnext $<
+	tsc --strict --outdir build --module commonjs --target es6 $<
 
 clean: phony
 	rm -fr build
