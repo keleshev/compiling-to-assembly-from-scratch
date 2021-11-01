@@ -15,7 +15,7 @@ test.s: compiler.js
 	node compiler.js > test.s
 
 %.js: %.ts
-	tsc --strict --module commonjs --target esnext $<
+	tsc --strict --module commonjs --target es6 $<
 
 clean: phony
 	rm *.exe *.s *.js
