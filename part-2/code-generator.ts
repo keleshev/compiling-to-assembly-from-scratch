@@ -577,4 +577,12 @@ class CodeGeneratorDynamicTyping implements Visitor<void> {
   }
 }
 
-export { CodeGenerator, CodeGeneratorDynamicTyping }
+function setEmitFunction(emitFunction: (input: string) => void) {
+  emit = emitFunction
+}
+
+function reset() {
+  Label.counter = 0;
+}
+
+export { CodeGenerator, CodeGeneratorDynamicTyping, setEmitFunction, reset }

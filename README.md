@@ -74,6 +74,16 @@ Install GCC toolchain that targets 32-bit ARM:
 -->
 
 
+## In the browser
+
+Minimal browser playground is available as well.
+
+```bash
+cd part-2
+make web/build.js
+open web/index.html
+```
+
 ## Contribution
 
 You are welcome to contribute your version of the book's compiler.
