@@ -19,5 +19,8 @@ test: build/test.exe phony
 build/%.js: %.ts $(SOURCES) Makefile
 	tsc --strict --outdir build --module commonjs --target es6 $<
 
+web/build.js: $(SOURCES) Makefile
+	tsc --strict --outfile web/build.js --module amd --target es6 $(SOURCES)
+
 clean: phony
 	rm -fr build

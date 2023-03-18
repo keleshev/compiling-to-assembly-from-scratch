@@ -1,0 +1,87 @@
+<html>
+  <head>
+    <title>Playground for Compiling to Assembly from Scratch</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: Georgia, "Times New Roman", Times, serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      h1 {
+        font-weight: 100;
+      }
+      textarea {
+        font-size: 14px;
+        font-family: monospace;
+      }
+    </style>
+    <script src="https://requirejs.org/docs/release/2.3.6/minified/require.js"></script>
+    <script src="build.js"></script>
+    <script>
+      function compile() {
+        requirejs(
+          ["parser", "code-generator"],
+          function ({ parser }, { CodeGenerator, setEmitFunction, reset }) {
+            reset();
+            try {
+              const source = document.getElementById("input").value;
+              const ast = parser.parseStringToCompletion(source);
+
+              let output = "";
+              setEmitFunction((input) => {
+                output += input + "\n";
+              });
+
+              const codeGenerator = new CodeGenerator();
+              ast.visit(codeGenerator);
+
+              renderOutput(output);
+            } catch (e) {
+              renderOutput(e.toString());
+            }
+          }
+        );
+      }
+
+      function renderOutput(code) {
+        document.getElementById("output").value = code.trim();
+      }
+
+      compile();
+    </script>
+  </head>
+  <body>
+    <div style="display: flex; flex-flow: column; height: 100%; padding: 1em">
+      <div>
+        <h1 style="margin-top: 0">
+          Playground for
+          <a
+            href="https://github.com/keleshev/compiling-to-assembly-from-scratch"
+            >Compiling to Assembly from Scratch</a
+          >
+        </h1>
+      </div>
+      <div style="display: flex; flex-direction: row; flex-grow: 1">
+        <textarea id="input" style="flex-grow: 1" oninput="compile()">
+function factorial(n: number): number {
+  if (n == 0) {
+    return 1;
+  } else {
+    return n * factorial(n - 1);
+  }
+}
+
+function main() {
+  assert(factorial(5) == 120);
+  return 0;
+}</textarea
+        >
+        <textarea id="output" style="flex-grow: 1; margin-left: 1em"></textarea>
+      </div>
+    </div>
+  </body>
+</html>
