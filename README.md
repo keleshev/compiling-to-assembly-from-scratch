@@ -80,8 +80,8 @@ Minimal browser playground is available as well.
 
 ```bash
 cd part-2
-make web/build.js
-open web/index.html
+make ../docs/build.js
+open ../docs/index.html
 ```
 
 ## Contribution

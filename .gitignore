@@ -9,3 +9,4 @@ build
 a.out
 *.js
 /target
+!docs/build.js
