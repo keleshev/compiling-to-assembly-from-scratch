@@ -76,7 +76,7 @@ Install GCC toolchain that targets 32-bit ARM:
 
 ## In the browser
 
-Minimal browser playground is available as well.
+Minimal [browser playground](https://keleshev.github.io/compiling-to-assembly-from-scratch/) is available as well.
 
 ```bash
 cd part-2
