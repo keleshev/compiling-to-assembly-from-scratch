@@ -107,7 +107,7 @@ class Parser[T]:
 
     @staticmethod
     def maybe[U](parser: Parser[U]) -> Parser[U | None]:
-        return parser.or_(Parser.constant(None))
+        return parser | Parser.constant(None)
 
     def parse_string_to_completion(self, string: str) -> T:
         source = Source(string, 0)
@@ -132,7 +132,7 @@ error = Parser.error
 
 @test
 def parsing_alternatives():
-    parser = regexp(re('bye')).or_(regexp(re('hai')))
+    parser = regexp(re('bye')) | regexp(re('hai'))
     result = parser.parse_string_to_completion('hai')
     assert result == 'hai'
 
@@ -146,8 +146,8 @@ def parsing_with_bindings():
 
 
 whitespace = regexp(re(r'[ \n\r\t]+'))
-comments = regexp(re('[/][/].*')).or_(regexp(re('(?s)[/][*].*[*][/]')))
-ignored = zero_or_more(whitespace.or_(comments))
+comments = regexp(re('[/][/].*')) | regexp(re('(?s)[/][*].*[*][/]'))
+ignored = zero_or_more(whitespace | comments)
 
 def token(pattern: Pattern) -> Parser[str]:
     return regexp(pattern).bind(lambda value:
@@ -192,7 +192,7 @@ expression: Parser[AST] = \
 # args <- (expression (COMMA expression)*)?
 args: Parser[list[AST]] = expression.bind(lambda arg:
     zero_or_more(COMMA.and_(expression)).bind(lambda args:
-        constant([arg] + args))).or_(constant([]))
+        constant([arg] + args))) | constant([])
 
 # call <- ID LEFT_PAREN args RIGHT_PAREN
 call = ID.bind(lambda callee:
@@ -200,8 +200,8 @@ call = ID.bind(lambda callee:
         RIGHT_PAREN.and_(constant(Call(callee, args))))))
 
 # atom <- call / ID / INTEGER / LEFT_PAREN expression RIGHT_PAREN
-atom: Parser[AST] = \
-    call.or_(id).or_(INTEGER).or_(
+atom: Parser[AST] = (
+    call | id | INTEGER |
         LEFT_PAREN.and_(expression).bind(lambda e:
             RIGHT_PAREN.and_(constant(e))))
 
@@ -221,13 +221,13 @@ def infix(operator_parser: Parser[Callable[[AST, AST], AST]],
                         reduce(reducer, operator_terms, term)))
 
 # product <- unary ((STAR / SLASH) unary)*
-product = infix(STAR.or_(SLASH), unary)
+product = infix(STAR | SLASH, unary)
 
 # sum <- product ((PLUS / MINUS) product)*
-sum = infix(PLUS.or_(MINUS), product)
+sum = infix(PLUS | MINUS, product)
 
 # comparison <- sum ((EQUAL / NOT_EQUAL) sum)*
-comparison = infix(EQUAL.or_(NOT_EQUAL), sum)
+comparison = infix(EQUAL | NOT_EQUAL, sum)
 
 # expression <- comparison
 expression.__dict__['_parse'] = comparison.__dict__['_parse']
@@ -285,7 +285,7 @@ block_statement: Parser[Block] = \
 parameters: Parser[list[str]] = \
     ID.bind(lambda param:
         zero_or_more(COMMA.and_(ID)).bind(lambda params:
-            constant([param] + params))).or_(constant([]))
+            constant([param] + params))) | constant([])
 
 # function_statement <-
 #     FUNCTION ID LEFT_PAREN parameters RIGHT_PAREN
@@ -306,15 +306,15 @@ function_statement: Parser[AST] = \
 #            / function_statement
 #            / expression_statement
 # TODO: order doesn't match, does it matter?
-statement_parser: Parser[AST] = \
-    return_statement.or_(
-        function_statement).or_(
-            if_statement).or_(
-                while_statement).or_(
-                    var_statement).or_(
-                        assignment_statement).or_(
-                            block_statement).or_(
-                                expression_statement)
+statement_parser: Parser[AST] = (
+      return_statement
+    | function_statement
+    | if_statement
+    | while_statement
+    | var_statement
+    | assignment_statement
+    | block_statement
+    | expression_statement)
 
 statement.__dict__['_parse'] = statement_parser.__dict__['_parse']
 
