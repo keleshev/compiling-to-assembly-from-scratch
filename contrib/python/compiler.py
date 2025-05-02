@@ -1,14 +1,10 @@
 from __future__ import annotations
-from typing import Protocol, Generic, TypeVar, Optional, Callable
+from collections.abc import Callable
 from dataclasses import dataclass
 from re import Pattern, compile as re
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from functools import reduce
 
-
-T = TypeVar('T', covariant=True)
-U = TypeVar('U')
-S = TypeVar('S')
 
 emit = print
 test = lambda f: f()
@@ -19,7 +15,7 @@ class Error(Exception):
 
 
 @dataclass
-class ParseResult(Generic[T]):
+class ParseResult[T]:
     value: T
     source: Source
 
@@ -29,7 +25,7 @@ class Source:
     string: str
     index: int
 
-    def match(self, regexp: Pattern) -> Optional[ParseResult[str]]:
+    def match(self, regexp: Pattern) -> ParseResult[str] | None:
         match = regexp.match(self.string, self.index)
         if match:
             value = match.group(0)
@@ -50,10 +46,10 @@ def source_matching_is_idempotent():
 
 
 @dataclass
-class Parser(Generic[T]):
-    _parse: Callable[[Source], Optional[ParseResult[T]]]
+class Parser[T]:
+    _parse: Callable[[Source], ParseResult[T] | None]
 
-    def parse(self, s: Source) -> Optional[ParseResult[T]]:
+    def parse(self, s: Source) -> ParseResult[T] | None:
         return self.__dict__['_parse'](s)
     
     @staticmethod
@@ -61,16 +57,16 @@ class Parser(Generic[T]):
         return Parser(lambda source: source.match(regexp))
 
     @staticmethod
-    def constant(value: U) -> Parser[U]:
+    def constant[U](value: U) -> Parser[U]:
         return Parser(lambda source: ParseResult(value, source))
 
     @staticmethod
-    def error(message: str) -> Parser[U]:
+    def error[U](message: str) -> Parser[U]:
         def error(source):
             raise Exception(message)
         return Parser(error)
 
-    def or_(self, parser: Parser[U]) -> Parser[U]:
+    def or_[U](self, parser: Parser[U]) -> Parser[U]:
         def f(source: Source):
             result = self.parse(source)
             if result:
@@ -82,7 +78,7 @@ class Parser(Generic[T]):
     __or__ = or_  # (x | y) could be used instead of x.or_(y)
 
     @staticmethod
-    def zero_or_more(parser: Parser[U]) -> Parser[list[U]]:
+    def zero_or_more[U](parser: Parser[U]) -> Parser[list[U]]:
         def f(source: Source):
             results: list[U] = []
             while (item := parser.parse(source)):
@@ -91,7 +87,7 @@ class Parser(Generic[T]):
             return ParseResult(results, source)
         return Parser(f)
 
-    def bind(self, callback: Callable[[T], Parser[U]]) -> Parser[U]:
+    def bind[U](self, callback: Callable[[T], Parser[U]]) -> Parser[U]:
         def f(source: Source):
             result = self.parse(source)
             if result:
@@ -102,15 +98,15 @@ class Parser(Generic[T]):
 
     # Non-primitive, composite combinators
 
-    def and_(self: Parser[S], parser: Parser[U]) -> Parser[U]:
+    def and_[S, U](self: Parser[S], parser: Parser[U]) -> Parser[U]:
         return self.bind(lambda _: parser)
 
-    def map(self: Parser[S], callback: Callable[[S], U]) -> Parser[U]:
+    def map[S, U](self: Parser[S], callback: Callable[[S], U]) -> Parser[U]:
         return self.bind(lambda value: 
                  Parser.constant(callback(value)))
 
     @staticmethod
-    def maybe(parser: Parser[Optional[U]]) -> Parser[Optional[U]]:
+    def maybe[U](parser: Parser[U]) -> Parser[U | None]:
         return parser.or_(Parser.constant(None))
 
     def parse_string_to_completion(self, string: str) -> T:
@@ -178,14 +174,16 @@ ID = token(re('[a-zA-Z_][a-zA-Z0-9_]*'))
 
 id = ID.map(lambda x: Id(x))
 
+type Binary = Callable[[AST, AST], AST]
+
 # Operators
 NOT = token(re('!')).map(lambda _: Not)
-EQUAL = token(re('==')).map(lambda _: Equal)
-NOT_EQUAL = token(re('!=')).map(lambda _: NotEqual)
-PLUS = token(re('[+]')).map(lambda _: Add)
-MINUS = token(re('[-]')).map(lambda _: Subtract)
-STAR = token(re('[*]')).map(lambda _: Multiply)
-SLASH = token(re('[\/]')).map(lambda _: Divide)
+EQUAL: Parser[Binary] = token(re('==')).map(lambda _: Equal)
+NOT_EQUAL: Parser[Binary] = token(re('!=')).map(lambda _: NotEqual)
+PLUS: Parser[Binary] = token(re('[+]')).map(lambda _: Add)
+MINUS: Parser[Binary] = token(re('[-]')).map(lambda _: Subtract)
+STAR: Parser[Binary] = token(re('[*]')).map(lambda _: Multiply)
+SLASH: Parser[Binary] = token(re('[/]')).map(lambda _: Divide)
 ASSIGN = token(re('=')).map(lambda _: Assign)
 
 expression: Parser[AST] = \
@@ -344,7 +342,7 @@ class Environment:
     next_local_offset: int
 
 
-class AST(metaclass=ABCMeta):
+class AST(ABC):
 
     @abstractmethod
     def emit(self, env: Environment) -> None: pass
