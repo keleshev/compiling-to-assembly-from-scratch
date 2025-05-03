@@ -47,11 +47,8 @@ def source_matching_is_idempotent():
 
 @dataclass
 class Parser[T]:
-    _parse: Callable[[Source], ParseResult[T] | None]
+    parse: Callable[[Source], ParseResult[T] | None]
 
-    def parse(self, s: Source) -> ParseResult[T] | None:
-        return self.__dict__['_parse'](s)
-    
     @staticmethod
     def regexp(regexp: Pattern) -> Parser[str]:
         return Parser(lambda source: source.match(regexp))
@@ -230,7 +227,7 @@ sum = infix(PLUS | MINUS, product)
 comparison = infix(EQUAL | NOT_EQUAL, sum)
 
 # expression <- comparison
-expression.__dict__['_parse'] = comparison.__dict__['_parse']
+expression.parse = comparison.parse
 
 
 statement: Parser[AST] = \
@@ -316,7 +313,7 @@ statement_parser: Parser[AST] = (
     | block_statement
     | expression_statement)
 
-statement.__dict__['_parse'] = statement_parser.__dict__['_parse']
+statement.parse = statement_parser.parse
 
 parser: Parser[AST] = \
     ignored.and_(zero_or_more(statement)).map(lambda statements:
